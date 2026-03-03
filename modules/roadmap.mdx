@@ -80,7 +80,7 @@ type RoadmapReaction =
 
 <CodeGroup>
 ```typescript View Reactions
-import { TonightPass } from '@tonightpass/sdk';
+import { TonightPass } from 'tonightpass';
 
 const tonightpass = new TonightPass({
   apiKey: process.env.TONIGHTPASS_API_KEY,
@@ -107,7 +107,7 @@ console.log(`\nTotal reactions: ${totalReactions}`);
 ```
 
 ```typescript Add Reaction
-import { TonightPass } from '@tonightpass/sdk';
+import { TonightPass } from 'tonightpass';
 
 const tonightpass = new TonightPass({
   apiKey: process.env.TONIGHTPASS_API_KEY,
@@ -130,7 +130,7 @@ console.log('Reaction added!');
 
 ```typescript React Component
 import { useState, useEffect } from 'react';
-import { TonightPass, RoadmapReaction } from '@tonightpass/sdk';
+import { TonightPass, RoadmapReaction } from 'tonightpass';
 
 const tonightpass = new TonightPass({
   apiKey: process.env.NEXT_PUBLIC_TONIGHTPASS_API_KEY,
@@ -216,7 +216,7 @@ export function RoadmapFeature({
 ```
 
 ```typescript Roadmap Board
-import { TonightPass } from '@tonightpass/sdk';
+import { TonightPass } from 'tonightpass';
 
 const tonightpass = new TonightPass({
   apiKey: process.env.TONIGHTPASS_API_KEY,

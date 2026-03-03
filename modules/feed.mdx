@@ -88,7 +88,7 @@ interface FeedPost {
 
 <CodeGroup>
 ```typescript Following Feed
-import { TonightPass } from '@tonightpass/sdk';
+import { TonightPass } from 'tonightpass';
 
 const tonightpass = new TonightPass({
   apiKey: process.env.TONIGHTPASS_API_KEY,
@@ -106,7 +106,7 @@ posts.forEach(post => {
 ```
 
 ```typescript Discover Feed
-import { TonightPass } from '@tonightpass/sdk';
+import { TonightPass } from 'tonightpass';
 
 const tonightpass = new TonightPass({
   apiKey: process.env.TONIGHTPASS_API_KEY,
@@ -125,7 +125,7 @@ discoverPosts.forEach((post, index) => {
 ```
 
 ```typescript Infinite Scroll Implementation
-import { TonightPass } from '@tonightpass/sdk';
+import { TonightPass } from 'tonightpass';
 
 const tonightpass = new TonightPass({
   apiKey: process.env.TONIGHTPASS_API_KEY,
@@ -161,7 +161,7 @@ window.addEventListener('scroll', () => {
 ```
 
 ```typescript Combined Feed View
-import { TonightPass } from '@tonightpass/sdk';
+import { TonightPass } from 'tonightpass';
 
 const tonightpass = new TonightPass({
   apiKey: process.env.TONIGHTPASS_API_KEY,

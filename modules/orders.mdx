@@ -94,7 +94,7 @@ type OrderStatus =
 
 <CodeGroup>
 ```typescript Get All Orders
-import { TonightPass } from '@tonightpass/sdk';
+import { TonightPass } from 'tonightpass';
 
 const tonightpass = new TonightPass({
   apiKey: process.env.TONIGHTPASS_API_KEY,
@@ -119,7 +119,7 @@ recentOrders.forEach(order => {
 ```
 
 ```typescript Get Order Details
-import { TonightPass } from '@tonightpass/sdk';
+import { TonightPass } from 'tonightpass';
 
 const tonightpass = new TonightPass({
   apiKey: process.env.TONIGHTPASS_API_KEY,
@@ -149,7 +149,7 @@ if (order.payment) {
 ```
 
 ```typescript Order History Dashboard
-import { TonightPass } from '@tonightpass/sdk';
+import { TonightPass } from 'tonightpass';
 
 const tonightpass = new TonightPass({
   apiKey: process.env.TONIGHTPASS_API_KEY,
@@ -195,7 +195,7 @@ console.log('Orders by Status:', summary.ordersByStatus);
 ```
 
 ```typescript Paginated Order List
-import { TonightPass } from '@tonightpass/sdk';
+import { TonightPass } from 'tonightpass';
 
 const tonightpass = new TonightPass({
   apiKey: process.env.TONIGHTPASS_API_KEY,

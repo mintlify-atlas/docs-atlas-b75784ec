@@ -1,0 +1,231 @@
+---
+title: 'Careers'
+description: 'Browse job openings, categories, employment types, and office locations'
+icon: 'briefcase'
+---
+
+The Careers module provides methods to access job postings and career-related information from Tonight Pass.
+
+## Categories
+
+### getAll
+
+Get all job categories.
+
+```typescript
+const categories = await tonightpass.careers.categories.getAll({
+  limit: 20,
+  offset: 0,
+});
+```
+
+<ParamField path="query" type="Query<'/careers/categories'>">
+  Optional query parameters for filtering and pagination
+</ParamField>
+
+**Returns:** `Promise<Category[]>`
+
+---
+
+## Employment Types
+
+### getAll
+
+Get all available employment types (full-time, part-time, contract, etc.).
+
+```typescript
+const employmentTypes = await tonightpass.careers.employmentTypes.getAll({
+  limit: 20,
+  offset: 0,
+});
+```
+
+<ParamField path="query" type="Query<'/careers/employmentTypes'>">
+  Optional query parameters for filtering and pagination
+</ParamField>
+
+**Returns:** `Promise<EmploymentType[]>`
+
+---
+
+## Jobs
+
+### getAll
+
+Get all job postings.
+
+```typescript
+const jobs = await tonightpass.careers.jobs.getAll({
+  limit: 20,
+  offset: 0,
+  categoryId: 1, // Optional: filter by category
+  officeId: 2, // Optional: filter by office
+});
+```
+
+<ParamField path="query" type="Query<'/careers/jobs'>">
+  Optional query parameters for filtering and pagination
+</ParamField>
+
+**Returns:** `Promise<Job[]>`
+
+---
+
+### get
+
+Get a specific job posting by ID.
+
+```typescript
+const job = await tonightpass.careers.jobs.get(123);
+```
+
+<ParamField path="jobId" type="number" required>
+  The job posting ID
+</ParamField>
+
+**Returns:** `Promise<Job>`
+
+---
+
+## Offices
+
+### getAll
+
+Get all office locations.
+
+```typescript
+const offices = await tonightpass.careers.offices.getAll({
+  limit: 20,
+  offset: 0,
+});
+```
+
+<ParamField path="query" type="Query<'/careers/offices'>">
+  Optional query parameters for filtering and pagination
+</ParamField>
+
+**Returns:** `Promise<Office[]>`
+
+---
+
+## Usage Example
+
+<CodeGroup>
+```typescript Basic Job Listing
+import { TonightPass } from 'tonightpass';
+
+const tonightpass = new TonightPass({
+  baseURL: 'https://api.tonightpass.com',
+});
+
+// Get all jobs
+const jobs = await tonightpass.careers.jobs.getAll({ limit: 10 });
+
+console.log('Available positions:', jobs.length);
+jobs.forEach(job => {
+  console.log(`- ${job.title} (${job.location})`);
+});
+```
+
+```typescript Filtered Search
+import { TonightPass } from 'tonightpass';
+
+const tonightpass = new TonightPass({
+  baseURL: 'https://api.tonightpass.com',
+});
+
+// Get categories and offices first
+const categories = await tonightpass.careers.categories.getAll();
+const offices = await tonightpass.careers.offices.getAll();
+
+console.log('Categories:', categories.map(c => c.name));
+console.log('Offices:', offices.map(o => o.city));
+
+// Get engineering jobs in Paris
+const engineeringCategory = categories.find(c => c.name === 'Engineering');
+const parisOffice = offices.find(o => o.city === 'Paris');
+
+const jobs = await tonightpass.careers.jobs.getAll({
+  categoryId: engineeringCategory?.id,
+  officeId: parisOffice?.id,
+});
+
+console.log(`Found ${jobs.length} engineering jobs in Paris`);
+```
+
+```typescript Job Details
+import { TonightPass } from 'tonightpass';
+
+const tonightpass = new TonightPass({
+  baseURL: 'https://api.tonightpass.com',
+});
+
+// Get specific job details
+const job = await tonightpass.careers.jobs.get(123);
+
+console.log('Position:', job.title);
+console.log('Department:', job.category.name);
+console.log('Location:', job.office.city);
+console.log('Type:', job.employmentType.name);
+console.log('Description:', job.description);
+console.log('Requirements:', job.requirements);
+console.log('Apply at:', job.applyUrl);
+```
+</CodeGroup>
+
+## Type Definitions
+
+```typescript
+interface Job {
+  id: number;
+  title: string;
+  description: string;
+  requirements: string;
+  location: string;
+  categoryId: number;
+  category: Category;
+  officeId: number;
+  office: Office;
+  employmentTypeId: number;
+  employmentType: EmploymentType;
+  applyUrl: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface Category {
+  id: number;
+  name: string;
+  description?: string;
+}
+
+interface EmploymentType {
+  id: number;
+  name: string; // e.g., "Full-time", "Part-time", "Contract"
+}
+
+interface Office {
+  id: number;
+  city: string;
+  country: string;
+  address: string;
+  timezone: string;
+}
+```
+
+## Best Practices
+
+<Tip>
+  - Cache category, employment type, and office data as they change infrequently
+  - Implement pagination when displaying job listings
+  - Filter jobs by category and location to improve user experience
+  - Regularly refresh job listings to show current openings
+</Tip>
+
+<Note>
+  The careers API is publicly accessible and does not require authentication. This allows you to display job openings on public career pages.
+</Note>
+
+## Related Modules
+
+- [Organizations](/modules/organizations) - Manage organization profiles and information

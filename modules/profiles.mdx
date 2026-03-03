@@ -196,7 +196,7 @@ interface Profile {
 
 <CodeGroup>
 ```typescript Search Profiles
-import { TonightPass } from '@tonightpass/sdk';
+import { TonightPass } from 'tonightpass';
 
 const tonightpass = new TonightPass({
   apiKey: process.env.TONIGHTPASS_API_KEY,
@@ -219,7 +219,7 @@ results.forEach(profile => {
 ```
 
 ```typescript View Profile
-import { TonightPass } from '@tonightpass/sdk';
+import { TonightPass } from 'tonightpass';
 
 const tonightpass = new TonightPass({
   apiKey: process.env.TONIGHTPASS_API_KEY,
@@ -248,7 +248,7 @@ console.log(`\nRecent posts: ${posts.length}`);
 ```
 
 ```typescript Follow Management
-import { TonightPass } from '@tonightpass/sdk';
+import { TonightPass } from 'tonightpass';
 
 const tonightpass = new TonightPass({
   apiKey: process.env.TONIGHTPASS_API_KEY,
@@ -282,7 +282,7 @@ console.log('Unfollowed @alice');
 ```
 
 ```typescript Profile Discovery
-import { TonightPass } from '@tonightpass/sdk';
+import { TonightPass } from 'tonightpass';
 
 const tonightpass = new TonightPass({
   apiKey: process.env.TONIGHTPASS_API_KEY,

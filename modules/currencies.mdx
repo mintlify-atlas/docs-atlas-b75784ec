@@ -113,7 +113,7 @@ The following currency codes are commonly supported:
 
 <CodeGroup>
 ```typescript Get Exchange Rates
-import { TonightPass } from '@tonightpass/sdk';
+import { TonightPass } from 'tonightpass';
 
 const tonightpass = new TonightPass({
   apiKey: process.env.TONIGHTPASS_API_KEY,
@@ -129,7 +129,7 @@ for (const [currency, rate] of Object.entries(rates)) {
 ```
 
 ```typescript Currency Conversion
-import { TonightPass } from '@tonightpass/sdk';
+import { TonightPass } from 'tonightpass';
 
 const tonightpass = new TonightPass({
   apiKey: process.env.TONIGHTPASS_API_KEY,
@@ -151,7 +151,7 @@ console.log(`50 GBP = ${result2.converted} USD`);
 ```
 
 ```typescript Price Display
-import { TonightPass } from '@tonightpass/sdk';
+import { TonightPass } from 'tonightpass';
 
 const tonightpass = new TonightPass({
   apiKey: process.env.TONIGHTPASS_API_KEY,

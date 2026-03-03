@@ -192,7 +192,7 @@ await tonightpass.auth.oauth2.googleOneTap({
 
 <CodeGroup>
 ```typescript Sign In/Sign Up
-import { TonightPass } from '@tonightpass/sdk';
+import { TonightPass } from 'tonightpass';
 
 const tonightpass = new TonightPass();
 
@@ -215,7 +215,7 @@ console.log('Authenticated:', signInResult);
 ```
 
 ```typescript OAuth2 Flow
-import { TonightPass } from '@tonightpass/sdk';
+import { TonightPass } from 'tonightpass';
 
 const tonightpass = new TonightPass();
 
@@ -232,7 +232,7 @@ await tonightpass.auth.oauth2.disconnect('google');
 ```
 
 ```typescript Password Recovery
-import { TonightPass } from '@tonightpass/sdk';
+import { TonightPass } from 'tonightpass';
 
 const tonightpass = new TonightPass();
 

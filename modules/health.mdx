@@ -79,7 +79,7 @@ interface ServiceHealth {
 
 <CodeGroup>
 ```typescript Basic Health Check
-import { TonightPass } from '@tonightpass/sdk';
+import { TonightPass } from 'tonightpass';
 
 const tonightpass = new TonightPass({
   apiKey: process.env.TONIGHTPASS_API_KEY,
@@ -96,7 +96,7 @@ if (systemHealth.status === 'healthy') {
 ```
 
 ```typescript Individual Service Checks
-import { TonightPass } from '@tonightpass/sdk';
+import { TonightPass } from 'tonightpass';
 
 const tonightpass = new TonightPass({
   apiKey: process.env.TONIGHTPASS_API_KEY,
@@ -133,7 +133,7 @@ if (!status.allHealthy) {
 ```
 
 ```typescript Monitoring Dashboard
-import { TonightPass } from '@tonightpass/sdk';
+import { TonightPass } from 'tonightpass';
 
 const tonightpass = new TonightPass({
   apiKey: process.env.TONIGHTPASS_API_KEY,
@@ -203,7 +203,7 @@ process.on('SIGINT', () => {
 ```
 
 ```typescript Dependency Health Check
-import { TonightPass } from '@tonightpass/sdk';
+import { TonightPass } from 'tonightpass';
 
 const tonightpass = new TonightPass({
   apiKey: process.env.TONIGHTPASS_API_KEY,
@@ -285,7 +285,7 @@ spec:
         - node
         - -e
         - |
-          const { TonightPass } = require('@tonightpass/sdk');
+          const { TonightPass } = require('tonightpass');
           const tp = new TonightPass();
           tp.health.getAll()
             .then(h => process.exit(h.status === 'healthy' ? 0 : 1))
@@ -298,7 +298,7 @@ spec:
 <Accordion title="Express.js Health Endpoint">
 ```typescript
 import express from 'express';
-import { TonightPass } from '@tonightpass/sdk';
+import { TonightPass } from 'tonightpass';
 
 const app = express();
 const tonightpass = new TonightPass();

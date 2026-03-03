@@ -249,7 +249,7 @@ const billing = await tonightpass.organizations.billing.get(
 
 <CodeGroup>
 ```typescript Create Organization
-import { TonightPass } from '@tonightpass/sdk';
+import { TonightPass } from 'tonightpass';
 
 const tonightpass = new TonightPass({
   apiKey: process.env.TONIGHTPASS_API_KEY,
@@ -279,7 +279,7 @@ await tonightpass.organizations.uploadFile(
 ```
 
 ```typescript Manage Members
-import { TonightPass } from '@tonightpass/sdk';
+import { TonightPass } from 'tonightpass';
 
 const tonightpass = new TonightPass({
   apiKey: process.env.TONIGHTPASS_API_KEY,
@@ -308,7 +308,7 @@ await tonightpass.organizations.members.accept(orgSlug);
 ```
 
 ```typescript Create Event
-import { TonightPass } from '@tonightpass/sdk';
+import { TonightPass } from 'tonightpass';
 
 const tonightpass = new TonightPass({
   apiKey: process.env.TONIGHTPASS_API_KEY,

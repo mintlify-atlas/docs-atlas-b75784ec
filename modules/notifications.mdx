@@ -31,7 +31,7 @@ console.log('Successfully registered for beta notifications');
 
 <CodeGroup>
 ```typescript Basic Registration
-import { TonightPass } from '@tonightpass/sdk';
+import { TonightPass } from 'tonightpass';
 
 const tonightpass = new TonightPass({
   apiKey: process.env.TONIGHTPASS_API_KEY,
@@ -46,7 +46,7 @@ try {
 ```
 
 ```typescript With Form Validation
-import { TonightPass } from '@tonightpass/sdk';
+import { TonightPass } from 'tonightpass';
 
 const tonightpass = new TonightPass({
   apiKey: process.env.TONIGHTPASS_API_KEY,
@@ -95,7 +95,7 @@ if (result.success) {
 
 ```typescript React Component
 import { useState } from 'react';
-import { TonightPass } from '@tonightpass/sdk';
+import { TonightPass } from 'tonightpass';
 
 const tonightpass = new TonightPass({
   apiKey: process.env.NEXT_PUBLIC_TONIGHTPASS_API_KEY,
@@ -143,7 +143,7 @@ export function BetaSignupForm() {
 
 ```typescript Express.js Endpoint
 import express from 'express';
-import { TonightPass } from '@tonightpass/sdk';
+import { TonightPass } from 'tonightpass';
 
 const app = express();
 const tonightpass = new TonightPass({

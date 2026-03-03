@@ -45,6 +45,7 @@
             "pages": [
               "modules/api-keys",
               "modules/auth",
+              "modules/careers",
               "modules/channels",
               "modules/currencies",
               "modules/feed",

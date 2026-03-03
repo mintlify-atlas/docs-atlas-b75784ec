@@ -241,7 +241,7 @@ const reposts = await tonightpass.users.postsReposts.getAll(postId);
 
 <CodeGroup>
 ```typescript Get Current User
-import { TonightPass } from '@tonightpass/sdk';
+import { TonightPass } from 'tonightpass';
 
 const tonightpass = new TonightPass({
   apiKey: process.env.TONIGHTPASS_API_KEY,
@@ -258,7 +258,7 @@ console.log(`Verified: ${currentUser.verified}`);
 ```
 
 ```typescript Update Profile
-import { TonightPass } from '@tonightpass/sdk';
+import { TonightPass } from 'tonightpass';
 
 const tonightpass = new TonightPass({
   apiKey: process.env.TONIGHTPASS_API_KEY,
@@ -292,7 +292,7 @@ console.log('Avatar uploaded!');
 ```
 
 ```typescript Check Username Availability
-import { TonightPass } from '@tonightpass/sdk';
+import { TonightPass } from 'tonightpass';
 
 const tonightpass = new TonightPass({
   apiKey: process.env.TONIGHTPASS_API_KEY,
@@ -317,7 +317,7 @@ if (result.available) {
 ```
 
 ```typescript Manage Posts
-import { TonightPass } from '@tonightpass/sdk';
+import { TonightPass } from 'tonightpass';
 
 const tonightpass = new TonightPass({
   apiKey: process.env.TONIGHTPASS_API_KEY,
@@ -349,7 +349,7 @@ console.log('Post deleted');
 ```
 
 ```typescript Notifications Management
-import { TonightPass } from '@tonightpass/sdk';
+import { TonightPass } from 'tonightpass';
 
 const tonightpass = new TonightPass({
   apiKey: process.env.TONIGHTPASS_API_KEY,
@@ -379,7 +379,7 @@ if (unreadCount > 0) {
 ```
 
 ```typescript Bookings and Tickets
-import { TonightPass } from '@tonightpass/sdk';
+import { TonightPass } from 'tonightpass';
 
 const tonightpass = new TonightPass({
   apiKey: process.env.TONIGHTPASS_API_KEY,
