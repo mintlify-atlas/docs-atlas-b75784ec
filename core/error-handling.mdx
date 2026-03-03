@@ -1,0 +1,626 @@
+---
+title: 'Error Handling'
+description: 'Handle API errors and validation failures gracefully'
+icon: 'triangle-exclamation'
+---
+
+The Tonight Pass SDK provides structured error handling to help you build robust applications.
+
+## TonightPassAPIError
+
+All API errors are thrown as instances of `TonightPassAPIError`:
+
+```typescript
+// From packages/node/src/rest/client.ts
+export class TonightPassAPIError<T> extends Error {
+  public readonly status: number;
+
+  constructor(
+    public readonly response: RedaxiosResponse<APIResponse<T>>,
+    public readonly data: ErroredAPIResponse
+  ) {
+    super(data.message);
+    this.status = response.status;
+  }
+}
+```
+
+<ParamField path="message" type="string">
+  Human-readable error message from `data.message`
+</ParamField>
+
+<ParamField path="status" type="number">
+  HTTP status code from the response (e.g., 400, 401, 404, 500)
+</ParamField>
+
+<ParamField path="data" type="ErroredAPIResponse">
+  Complete error response object with additional details
+</ParamField>
+
+<ParamField path="response" type="RedaxiosResponse<APIResponse<T>>">
+  Raw HTTP response object
+</ParamField>
+
+## ErroredAPIResponse Type
+
+The error response structure:
+
+```typescript
+// From packages/node/src/rest/client.ts
+export type ErroredAPIResponse = {
+  success: false;
+  message: string;
+  statusCode: number;
+  errors?: {
+    [key: string]: string[];
+  };
+};
+```
+
+<ParamField path="success" type="false">
+  Always `false` for error responses
+</ParamField>
+
+<ParamField path="message" type="string">
+  Main error message describing what went wrong
+</ParamField>
+
+<ParamField path="statusCode" type="number">
+  HTTP status code (matches `status` on the error object)
+</ParamField>
+
+<ParamField path="errors" type="Record<string, string[]>">
+  Optional validation errors object with field-specific error messages
+</ParamField>
+
+## Basic Error Handling
+
+<CodeGroup>
+
+```typescript Try-Catch
+import { TonightPass, TonightPassAPIError } from '@tonightpass/node';
+
+const tonightpass = new TonightPass({
+  baseURL: 'https://api.tonightpass.com',
+  apiKey: process.env.TONIGHTPASS_API_KEY!
+});
+
+try {
+  const event = await tonightpass.organizations.events.get({
+    organizationId: 'org-123',
+    id: 'event-456'
+  });
+  console.log(event);
+} catch (error) {
+  if (error instanceof TonightPassAPIError) {
+    console.error('API Error:', error.message);
+    console.error('Status:', error.status);
+    console.error('Details:', error.data);
+  } else {
+    console.error('Unexpected error:', error);
+  }
+}
+```
+
+```typescript Async Handler
+import { TonightPassAPIError } from '@tonightpass/node';
+
+async function fetchEvent(eventId: string) {
+  try {
+    return await tonightpass.organizations.events.get({
+      organizationId: 'org-123',
+      id: eventId
+    });
+  } catch (error) {
+    if (error instanceof TonightPassAPIError) {
+      throw new Error(
+        `Failed to fetch event: ${error.message} (${error.status})`
+      );
+    }
+    throw error;
+  }
+}
+```
+
+</CodeGroup>
+
+## Handling Status Codes
+
+Handle different error types based on HTTP status codes:
+
+```typescript
+import { TonightPassAPIError } from '@tonightpass/node';
+
+try {
+  const event = await tonightpass.organizations.events.get({
+    organizationId: 'org-123',
+    id: 'event-456'
+  });
+} catch (error) {
+  if (error instanceof TonightPassAPIError) {
+    switch (error.status) {
+      case 400:
+        console.error('Bad request:', error.data.message);
+        // Handle validation errors
+        if (error.data.errors) {
+          console.error('Validation errors:', error.data.errors);
+        }
+        break;
+      
+      case 401:
+        console.error('Unauthorized:', error.data.message);
+        // Redirect to login or refresh token
+        tonightpass.client.setAccessToken(undefined);
+        break;
+      
+      case 403:
+        console.error('Forbidden:', error.data.message);
+        // User doesn't have permission
+        break;
+      
+      case 404:
+        console.error('Not found:', error.data.message);
+        // Resource doesn't exist
+        break;
+      
+      case 429:
+        console.error('Rate limited:', error.data.message);
+        // Implement backoff and retry
+        break;
+      
+      case 500:
+      case 503:
+        console.error('Server error:', error.data.message);
+        // Retry the request or show error message
+        break;
+      
+      default:
+        console.error('Unknown error:', error.status, error.data.message);
+    }
+  }
+}
+```
+
+## Validation Errors
+
+Validation errors include field-specific error messages in the `errors` object:
+
+```typescript
+import { TonightPassAPIError } from '@tonightpass/node';
+
+try {
+  const event = await tonightpass.organizations.events.create({
+    organizationId: 'org-123',
+    title: '',  // Invalid: empty title
+    description: 'Event description',
+    startDate: 'invalid-date',  // Invalid: bad date format
+    endDate: '2026-07-15T23:00:00Z'
+  });
+} catch (error) {
+  if (error instanceof TonightPassAPIError) {
+    console.error('Error:', error.message);
+    
+    // Check for validation errors
+    if (error.data.errors) {
+      // error.data.errors structure:
+      // {
+      //   title: ['Title is required', 'Title must be at least 3 characters'],
+      //   startDate: ['Invalid date format']
+      // }
+      
+      for (const [field, messages] of Object.entries(error.data.errors)) {
+        console.error(`${field}:`);
+        messages.forEach(msg => console.error(`  - ${msg}`));
+      }
+    }
+  }
+}
+```
+
+### Displaying Validation Errors
+
+<Tabs>
+  <Tab title="React">
+    ```typescript
+    import { useState } from 'react';
+    import { TonightPassAPIError } from '@tonightpass/node';
+
+    function CreateEventForm() {
+      const [errors, setErrors] = useState<Record<string, string[]>>({});
+
+      async function handleSubmit(data: EventData) {
+        try {
+          await tonightpass.organizations.events.create(data);
+          setErrors({});
+        } catch (error) {
+          if (error instanceof TonightPassAPIError) {
+            if (error.data.errors) {
+              setErrors(error.data.errors);
+            }
+          }
+        }
+      }
+
+      return (
+        <form onSubmit={handleSubmit}>
+          <input name="title" />
+          {errors.title?.map((error, i) => (
+            <p key={i} className="error">{error}</p>
+          ))}
+          
+          <input name="startDate" />
+          {errors.startDate?.map((error, i) => (
+            <p key={i} className="error">{error}</p>
+          ))}
+          
+          <button type="submit">Create Event</button>
+        </form>
+      );
+    }
+    ```
+  </Tab>
+
+  <Tab title="Express">
+    ```typescript
+    import { TonightPassAPIError } from '@tonightpass/node';
+    import type { Request, Response } from 'express';
+
+    app.post('/api/events', async (req: Request, res: Response) => {
+      try {
+        const event = await tonightpass.organizations.events.create({
+          organizationId: req.body.organizationId,
+          ...req.body
+        });
+        
+        res.json({ success: true, data: event });
+      } catch (error) {
+        if (error instanceof TonightPassAPIError) {
+          res.status(error.status).json({
+            success: false,
+            message: error.message,
+            errors: error.data.errors
+          });
+        } else {
+          res.status(500).json({
+            success: false,
+            message: 'Internal server error'
+          });
+        }
+      }
+    });
+    ```
+  </Tab>
+</Tabs>
+
+## Common Error Types
+
+The SDK includes error type constants for common scenarios:
+
+```typescript
+// From packages/node/src/rest/types/errors/index.ts
+export enum ErrorType {
+  // Auth
+  AuthEmailAlreadyExists = "auth.email-already-exists",
+  AuthUsernameAlreadyExists = "auth.username-already-exists",
+  AuthInvalidCredentials = "auth.invalid-credentials",
+  AuthUserNotFound = "auth.user-not-found",
+  AuthInvalidToken = "auth.invalid-token",
+  AuthTokenExpired = "auth.token-expired",
+  AuthUnauthorized = "auth.unauthorized",
+  
+  // Users
+  UserNotFound = "user.not-found",
+  UserInvalidUsername = "user.invalid-username",
+  UserInvalidEmail = "user.invalid-email",
+  
+  // Organizations
+  OrganizationNotFound = "organization.not-found",
+  OrganizationUnauthorized = "organization.unauthorized",
+  
+  // Events
+  EventNotFound = "event.not-found",
+  EventUnavailable = "event.unavailable",
+  EventTicketNotFound = "event.ticket-not-found",
+  EventTicketUnavailable = "event.ticket-unavailable",
+  
+  // Orders
+  OrderNotFound = "order.not-found",
+  OrderPaymentFailed = "order.payment-failed",
+  OrderAlreadyPaid = "order.already-paid",
+  
+  // General
+  ValidationError = "validation.error",
+  NotFound = "not-found",
+  BadRequest = "bad-request",
+  Unauthorized = "unauthorized",
+  Forbidden = "forbidden",
+  TooManyRequests = "too-many-requests",
+  InternalServerError = "server.internal-error",
+}
+```
+
+## Error Handling Utilities
+
+Create reusable error handling utilities:
+
+```typescript
+import { TonightPassAPIError, ErrorType } from '@tonightpass/node';
+
+export function isNotFoundError(error: unknown): boolean {
+  return (
+    error instanceof TonightPassAPIError &&
+    error.status === 404
+  );
+}
+
+export function isAuthError(error: unknown): boolean {
+  return (
+    error instanceof TonightPassAPIError &&
+    (error.status === 401 || error.status === 403)
+  );
+}
+
+export function isValidationError(error: unknown): boolean {
+  return (
+    error instanceof TonightPassAPIError &&
+    error.status === 400 &&
+    error.data.errors !== undefined
+  );
+}
+
+export function isRateLimitError(error: unknown): boolean {
+  return (
+    error instanceof TonightPassAPIError &&
+    error.status === 429
+  );
+}
+
+export function getErrorMessage(error: unknown): string {
+  if (error instanceof TonightPassAPIError) {
+    return error.message;
+  }
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return 'An unknown error occurred';
+}
+```
+
+Use the utilities:
+
+```typescript
+try {
+  const event = await tonightpass.organizations.events.get({
+    organizationId: 'org-123',
+    id: 'event-456'
+  });
+} catch (error) {
+  if (isNotFoundError(error)) {
+    console.log('Event not found');
+  } else if (isAuthError(error)) {
+    console.log('Authentication required');
+    tonightpass.client.setAccessToken(undefined);
+  } else if (isValidationError(error)) {
+    console.log('Validation failed:', error.data.errors);
+  } else {
+    console.error('Error:', getErrorMessage(error));
+  }
+}
+```
+
+## Retry with Exponential Backoff
+
+Implement automatic retries for transient errors:
+
+```typescript
+import { TonightPassAPIError } from '@tonightpass/node';
+
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  maxRetries = 3,
+  baseDelay = 1000
+): Promise<T> {
+  let lastError: Error;
+  
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error as Error;
+      
+      // Don't retry client errors (4xx)
+      if (
+        error instanceof TonightPassAPIError &&
+        error.status >= 400 &&
+        error.status < 500 &&
+        error.status !== 429 // Except rate limiting
+      ) {
+        throw error;
+      }
+      
+      // Calculate delay with exponential backoff
+      const delay = baseDelay * Math.pow(2, i);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  
+  throw lastError!;
+}
+
+// Usage
+const event = await withRetry(() =>
+  tonightpass.organizations.events.get({
+    organizationId: 'org-123',
+    id: 'event-456'
+  })
+);
+```
+
+## Global Error Handler
+
+Implement a global error handler for consistent error handling:
+
+```typescript
+import { TonightPassAPIError } from '@tonightpass/node';
+
+class ErrorHandler {
+  handle(error: unknown): void {
+    if (error instanceof TonightPassAPIError) {
+      this.handleAPIError(error);
+    } else if (error instanceof Error) {
+      this.handleGenericError(error);
+    } else {
+      this.handleUnknownError(error);
+    }
+  }
+  
+  private handleAPIError(error: TonightPassAPIError<any>): void {
+    console.error(`API Error [${error.status}]:`, error.message);
+    
+    if (error.data.errors) {
+      console.error('Validation errors:', error.data.errors);
+    }
+    
+    // Send to error tracking service
+    this.sendToErrorTracking(error);
+    
+    // Show user notification
+    this.showUserNotification(error.message);
+  }
+  
+  private handleGenericError(error: Error): void {
+    console.error('Error:', error.message);
+    this.sendToErrorTracking(error);
+  }
+  
+  private handleUnknownError(error: unknown): void {
+    console.error('Unknown error:', error);
+  }
+  
+  private sendToErrorTracking(error: Error): void {
+    // Integrate with Sentry, Rollbar, etc.
+  }
+  
+  private showUserNotification(message: string): void {
+    // Show toast, modal, etc.
+  }
+}
+
+export const errorHandler = new ErrorHandler();
+
+// Use globally
+try {
+  await someOperation();
+} catch (error) {
+  errorHandler.handle(error);
+}
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Always Check Error Type" icon="check">
+    Always check if an error is a `TonightPassAPIError` before accessing its properties:
+
+    ```typescript
+    // ✓ Good
+    catch (error) {
+      if (error instanceof TonightPassAPIError) {
+        console.error(error.status, error.message);
+      }
+    }
+
+    // ✗ Bad - Will crash if not a TonightPassAPIError
+    catch (error) {
+      console.error(error.status, error.message);
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Handle Validation Errors" icon="list-check">
+    Always check for validation errors when handling 400 responses:
+
+    ```typescript
+    if (error instanceof TonightPassAPIError && error.status === 400) {
+      if (error.data.errors) {
+        // Show field-specific errors
+        displayValidationErrors(error.data.errors);
+      } else {
+        // Show general error message
+        showError(error.message);
+      }
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Don't Retry Client Errors" icon="rotate-right">
+    Don't retry 4xx errors (except 429 rate limiting):
+
+    ```typescript
+    // ✓ Good - Only retry server errors
+    if (error.status >= 500) {
+      await retryRequest();
+    }
+
+    // ✗ Bad - Retrying 404 won't help
+    if (error.status === 404) {
+      await retryRequest();
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Log Errors for Debugging" icon="bug">
+    Log detailed error information for debugging:
+
+    ```typescript
+    catch (error) {
+      if (error instanceof TonightPassAPIError) {
+        console.error('API Error Details:', {
+          message: error.message,
+          status: error.status,
+          data: error.data,
+          response: error.response
+        });
+      }
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Provide User-Friendly Messages" icon="message">
+    Convert technical errors to user-friendly messages:
+
+    ```typescript
+    function getUserMessage(error: TonightPassAPIError): string {
+      switch (error.status) {
+        case 404:
+          return 'The requested item could not be found.';
+        case 401:
+          return 'Please sign in to continue.';
+        case 429:
+          return 'Too many requests. Please try again later.';
+        case 500:
+          return 'Something went wrong. Please try again.';
+        default:
+          return error.message;
+      }
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="key" href="/core/authentication">
+    Handle authentication errors properly
+  </Card>
+  <Card title="Client" icon="globe" href="/core/client">
+    Learn about the Client class
+  </Card>
+  <Card title="API Types" icon="list" href="/api/types">
+    Browse all API types
+  </Card>
+  <Card title="API Reference" icon="book" href="/api/client">
+    Explore API endpoints
+  </Card>
+</CardGroup>

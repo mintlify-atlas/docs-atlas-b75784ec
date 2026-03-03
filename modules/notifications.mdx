@@ -1,0 +1,202 @@
+---
+title: 'Notifications'
+description: 'Manage notification subscriptions and beta registrations'
+icon: 'bell'
+---
+
+The Notifications module provides methods to manage notification subscriptions, including beta program registrations.
+
+## Available Methods
+
+### registerToBeta
+
+Register an email address to receive beta program notifications.
+
+```typescript
+await tonightpass.notifications.registerToBeta('user@example.com');
+console.log('Successfully registered for beta notifications');
+```
+
+<ParamField path="email" type="string" required>
+  The email address to register for beta notifications
+</ParamField>
+
+**Returns:** `Promise<void>`
+
+<Note>
+  This method subscribes the provided email to receive notifications about beta features, early access programs, and testing opportunities.
+</Note>
+
+## Usage Examples
+
+<CodeGroup>
+```typescript Basic Registration
+import { TonightPass } from '@tonightpass/sdk';
+
+const tonightpass = new TonightPass({
+  apiKey: process.env.TONIGHTPASS_API_KEY,
+});
+
+try {
+  await tonightpass.notifications.registerToBeta('user@example.com');
+  console.log('You are now registered for beta notifications!');
+} catch (error) {
+  console.error('Registration failed:', error);
+}
+```
+
+```typescript With Form Validation
+import { TonightPass } from '@tonightpass/sdk';
+
+const tonightpass = new TonightPass({
+  apiKey: process.env.TONIGHTPASS_API_KEY,
+});
+
+interface BetaRegistrationForm {
+  email: string;
+}
+
+function validateEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
+
+async function registerForBeta(formData: BetaRegistrationForm) {
+  // Validate email
+  if (!validateEmail(formData.email)) {
+    throw new Error('Invalid email address');
+  }
+  
+  try {
+    await tonightpass.notifications.registerToBeta(formData.email);
+    return {
+      success: true,
+      message: 'Successfully registered for beta program',
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      message: error.message || 'Registration failed',
+    };
+  }
+}
+
+// Usage
+const result = await registerForBeta({
+  email: 'user@example.com',
+});
+
+if (result.success) {
+  console.log(result.message);
+} else {
+  console.error(result.message);
+}
+```
+
+```typescript React Component
+import { useState } from 'react';
+import { TonightPass } from '@tonightpass/sdk';
+
+const tonightpass = new TonightPass({
+  apiKey: process.env.NEXT_PUBLIC_TONIGHTPASS_API_KEY,
+});
+
+export function BetaSignupForm() {
+  const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
+  
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setMessage('');
+    
+    try {
+      await tonightpass.notifications.registerToBeta(email);
+      setMessage('Successfully registered! Check your email.');
+      setEmail('');
+    } catch (error: any) {
+      setMessage(error.message || 'Registration failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  return (
+    <form onSubmit={handleSubmit}>
+      <input
+        type="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        placeholder="Enter your email"
+        required
+        disabled={loading}
+      />
+      <button type="submit" disabled={loading}>
+        {loading ? 'Registering...' : 'Join Beta'}
+      </button>
+      {message && <p>{message}</p>}
+    </form>
+  );
+}
+```
+
+```typescript Express.js Endpoint
+import express from 'express';
+import { TonightPass } from '@tonightpass/sdk';
+
+const app = express();
+const tonightpass = new TonightPass({
+  apiKey: process.env.TONIGHTPASS_API_KEY,
+});
+
+app.use(express.json());
+
+app.post('/api/beta-signup', async (req, res) => {
+  const { email } = req.body;
+  
+  if (!email) {
+    return res.status(400).json({ error: 'Email is required' });
+  }
+  
+  try {
+    await tonightpass.notifications.registerToBeta(email);
+    res.json({ 
+      success: true,
+      message: 'Successfully registered for beta notifications',
+    });
+  } catch (error: any) {
+    console.error('Beta registration error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Registration failed',
+    });
+  }
+});
+
+app.listen(3000);
+```
+</CodeGroup>
+
+## User Notifications
+
+For managing user-specific notifications (reading notifications, marking as read, etc.), see the [Users](/modules/users) module which includes nested notification management methods.
+
+## Best Practices
+
+<Tip>
+  - Always validate email addresses before submitting
+  - Provide clear feedback to users after registration
+  - Handle duplicate registrations gracefully
+  - Consider implementing CAPTCHA for public beta signup forms
+  - Store consent information for GDPR compliance
+</Tip>
+
+<Warning>
+  Be mindful of rate limiting when implementing public beta signup forms. Consider implementing client-side validation and throttling to prevent abuse.
+</Warning>
+
+## Related Modules
+
+- [Users](/modules/users) - Access user-specific notification management
+- [Auth](/modules/auth) - User authentication for notification preferences

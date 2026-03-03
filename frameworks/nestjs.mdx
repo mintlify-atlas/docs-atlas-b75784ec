@@ -1,0 +1,341 @@
+---
+title: NestJS
+description: Tonight Pass NestJS SDK for backend integrations
+---
+
+The `@tonightpass/nest` package provides TypeScript types and utilities for integrating Tonight Pass with NestJS applications.
+
+## Installation
+
+Install the package along with its peer dependencies:
+
+<CodeGroup>
+```bash npm
+npm install @tonightpass/nest @nestjs/common
+```
+
+```bash yarn
+yarn add @tonightpass/nest @nestjs/common
+```
+
+```bash pnpm
+pnpm add @tonightpass/nest @nestjs/common
+```
+</CodeGroup>
+
+<Note>
+This package requires `@nestjs/common` version 8.x.x or higher as a peer dependency.
+</Note>
+
+## Overview
+
+The `@tonightpass/nest` package re-exports TypeScript types from NestJS common modules, providing a unified interface for Tonight Pass integrations. It includes the core `tonightpass` SDK with additional NestJS-specific type definitions.
+
+## Dependencies
+
+The package bundles:
+
+- **tonightpass**: Core Tonight Pass SDK for API interactions
+- **pathcat**: Path parsing and manipulation utilities
+- **redaxios**: Lightweight HTTP client for API requests
+
+## What's Included
+
+The package exports type definitions that extend NestJS common functionality:
+
+```typescript
+import type * from '@tonightpass/nest';
+
+// Access to NestJS common types with Tonight Pass extensions
+```
+
+## Usage with NestJS
+
+Use the Tonight Pass client in your NestJS services:
+
+<Steps>
+  <Step title="Import the Client">
+    Import the Tonight Pass client in your service:
+
+    ```typescript
+    import { Injectable } from '@nestjs/common';
+    import { Client } from 'tonightpass';
+
+    @Injectable()
+    export class UserService {
+      private readonly client: Client;
+
+      constructor() {
+        this.client = new Client({
+          baseURL: process.env.TONIGHTPASS_API_URL,
+          apiKey: process.env.TONIGHTPASS_API_KEY
+        });
+      }
+    }
+    ```
+  </Step>
+
+  <Step title="Make API Requests">
+    Use the client to interact with Tonight Pass API:
+
+    ```typescript
+    @Injectable()
+    export class UserService {
+      async getUser(id: string) {
+        return await this.client.get('/users/:id', { id });
+      }
+
+      async createUser(data: CreateUserDto) {
+        return await this.client.post('/users', {}, data);
+      }
+
+      async updateUser(id: string, data: UpdateUserDto) {
+        return await this.client.patch('/users/:id', { id }, data);
+      }
+    }
+    ```
+  </Step>
+
+  <Step title="Create a Provider">
+    For better dependency injection, create a provider:
+
+    ```typescript
+    import { Module } from '@nestjs/common';
+    import { Client } from 'tonightpass';
+
+    export const TONIGHTPASS_CLIENT = 'TONIGHTPASS_CLIENT';
+
+    @Module({
+      providers: [
+        {
+          provide: TONIGHTPASS_CLIENT,
+          useFactory: () => {
+            return new Client({
+              baseURL: process.env.TONIGHTPASS_API_URL,
+              apiKey: process.env.TONIGHTPASS_API_KEY
+            });
+          }
+        },
+        UserService
+      ],
+      exports: [TONIGHTPASS_CLIENT, UserService]
+    })
+    export class TonightPassModule {}
+    ```
+  </Step>
+
+  <Step title="Inject the Client">
+    Inject the client in your services:
+
+    ```typescript
+    import { Injectable, Inject } from '@nestjs/common';
+    import type { Client } from 'tonightpass';
+
+    @Injectable()
+    export class UserService {
+      constructor(
+        @Inject(TONIGHTPASS_CLIENT)
+        private readonly client: Client
+      ) {}
+
+      async getUser(id: string) {
+        return await this.client.get('/users/:id', { id });
+      }
+    }
+    ```
+  </Step>
+</Steps>
+
+## Controller Integration
+
+Integrate Tonight Pass client in your NestJS controllers:
+
+```typescript
+import { Controller, Get, Post, Body, Param } from '@nestjs/common';
+import { UserService } from './user.service';
+
+@Controller('users')
+export class UserController {
+  constructor(private readonly userService: UserService) {}
+
+  @Get(':id')
+  async getUser(@Param('id') id: string) {
+    return await this.userService.getUser(id);
+  }
+
+  @Post()
+  async createUser(@Body() createUserDto: CreateUserDto) {
+    return await this.userService.createUser(createUserDto);
+  }
+}
+```
+
+## Environment Configuration
+
+Configure Tonight Pass using environment variables:
+
+```env
+TONIGHTPASS_API_URL=https://api.tonightpass.com
+TONIGHTPASS_API_KEY=your_api_key_here
+```
+
+Use NestJS ConfigModule for type-safe configuration:
+
+```typescript
+import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { Client } from 'tonightpass';
+
+@Module({
+  imports: [ConfigModule],
+  providers: [
+    {
+      provide: TONIGHTPASS_CLIENT,
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => {
+        return new Client({
+          baseURL: configService.get<string>('TONIGHTPASS_API_URL'),
+          apiKey: configService.get<string>('TONIGHTPASS_API_KEY')
+        });
+      }
+    }
+  ]
+})
+export class TonightPassModule {}
+```
+
+## Error Handling
+
+Handle Tonight Pass API errors using NestJS exception filters:
+
+```typescript
+import { 
+  ExceptionFilter, 
+  Catch, 
+  ArgumentsHost, 
+  HttpException,
+  HttpStatus 
+} from '@nestjs/common';
+import type { TonightPassAPIError } from 'tonightpass';
+
+@Catch()
+export class TonightPassExceptionFilter implements ExceptionFilter {
+  catch(exception: TonightPassAPIError | Error, host: ArgumentsHost) {
+    const ctx = host.switchToHttp();
+    const response = ctx.getResponse();
+
+    if ('status' in exception && 'code' in exception) {
+      // Tonight Pass API error
+      return response.status(exception.status).json({
+        statusCode: exception.status,
+        message: exception.message,
+        code: exception.code
+      });
+    }
+
+    // Generic error
+    return response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+      statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+      message: exception.message
+    });
+  }
+}
+```
+
+Apply the filter to your controller:
+
+```typescript
+import { Controller, UseFilters } from '@nestjs/common';
+
+@Controller('users')
+@UseFilters(TonightPassExceptionFilter)
+export class UserController {
+  // ... controller methods
+}
+```
+
+## TypeScript Support
+
+The package provides full TypeScript support with:
+
+- Type definitions for all Tonight Pass API endpoints
+- Type-safe request and response handling
+- Automatic path parameter type checking
+- Query parameter validation
+
+```typescript
+import type { Client } from 'tonightpass';
+
+// Type-safe API calls
+const response = await client.get('/users/:id', { id: '123' });
+//                                               ^ Type-checked
+
+// Response is automatically typed
+response.name; // TypeScript knows the response shape
+```
+
+## Testing
+
+Mock the Tonight Pass client in your tests:
+
+```typescript
+import { Test } from '@nestjs/testing';
+import { UserService } from './user.service';
+import { TONIGHTPASS_CLIENT } from './constants';
+
+describe('UserService', () => {
+  let service: UserService;
+  let mockClient: jest.Mocked<Client>;
+
+  beforeEach(async () => {
+    mockClient = {
+      get: jest.fn(),
+      post: jest.fn(),
+      patch: jest.fn(),
+      delete: jest.fn()
+    } as any;
+
+    const module = await Test.createTestingModule({
+      providers: [
+        UserService,
+        {
+          provide: TONIGHTPASS_CLIENT,
+          useValue: mockClient
+        }
+      ]
+    }).compile();
+
+    service = module.get<UserService>(UserService);
+  });
+
+  it('should get user', async () => {
+    const mockUser = { id: '123', name: 'John' };
+    mockClient.get.mockResolvedValue(mockUser);
+
+    const result = await service.getUser('123');
+
+    expect(mockClient.get).toHaveBeenCalledWith('/users/:id', { id: '123' });
+    expect(result).toEqual(mockUser);
+  });
+});
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Use Dependency Injection" icon="syringe">
+    Create providers for the Tonight Pass client to enable proper dependency injection and testing.
+  </Card>
+  
+  <Card title="Environment Variables" icon="gear">
+    Store API keys and URLs in environment variables, never hardcode them in your source code.
+  </Card>
+  
+  <Card title="Error Handling" icon="triangle-exclamation">
+    Implement custom exception filters to handle Tonight Pass API errors consistently.
+  </Card>
+  
+  <Card title="Type Safety" icon="shield-check">
+    Leverage TypeScript types for compile-time checking of API requests and responses.
+  </Card>
+</CardGroup>

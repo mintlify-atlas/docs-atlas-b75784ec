@@ -1,0 +1,148 @@
+---
+title: 'API Keys'
+description: 'Manage API keys for authentication and authorization'
+icon: 'key'
+---
+
+The API Keys module provides methods to manage API keys for your Tonight Pass applications. API keys are used for server-to-server authentication and authorization.
+
+## Available Methods
+
+### getAll
+
+Retrieve all API keys associated with your account.
+
+```typescript
+const apiKeys = await tonightpass.apiKeys.getAll();
+```
+
+**Returns:** `Promise<ApiKey[]>`
+
+---
+
+### get
+
+Retrieve a specific API key by its ID.
+
+```typescript
+const apiKey = await tonightpass.apiKeys.get(apiKeyId);
+```
+
+<ParamField path="apiKeyId" type="string" required>
+  The unique identifier of the API key
+</ParamField>
+
+**Returns:** `Promise<ApiKey>`
+
+---
+
+### create
+
+Create a new API key.
+
+```typescript
+const newApiKey = await tonightpass.apiKeys.create({
+  name: 'Production API Key',
+  description: 'API key for production environment',
+  // ... other properties
+});
+```
+
+<ParamField path="data" type="CreateApiKeyDto" required>
+  The data for creating a new API key
+  
+  <Expandable title="CreateApiKeyDto properties">
+    <ParamField path="name" type="string" required>
+      Name of the API key
+    </ParamField>
+    <ParamField path="description" type="string">
+      Description of the API key's purpose
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+**Returns:** `Promise<ApiKey>`
+
+---
+
+### update
+
+Update an existing API key.
+
+```typescript
+const updatedApiKey = await tonightpass.apiKeys.update(apiKeyId, {
+  name: 'Updated API Key Name',
+  description: 'Updated description',
+});
+```
+
+<ParamField path="apiKeyId" type="string" required>
+  The unique identifier of the API key to update
+</ParamField>
+
+<ParamField path="data" type="UpdateApiKeyDto" required>
+  The data to update the API key with
+</ParamField>
+
+**Returns:** `Promise<ApiKey>`
+
+---
+
+### delete
+
+Delete an API key.
+
+```typescript
+await tonightpass.apiKeys.delete(apiKeyId);
+```
+
+<ParamField path="apiKeyId" type="string" required>
+  The unique identifier of the API key to delete
+</ParamField>
+
+**Returns:** `Promise<void>`
+
+<Warning>
+  Deleting an API key is permanent and cannot be undone. Make sure to remove the key from all applications before deletion.
+</Warning>
+
+## Usage Example
+
+<CodeGroup>
+```typescript Complete Example
+import { TonightPass } from '@tonightpass/sdk';
+
+const tonightpass = new TonightPass({
+  apiKey: process.env.TONIGHTPASS_API_KEY,
+});
+
+// Create a new API key
+const apiKey = await tonightpass.apiKeys.create({
+  name: 'Development Key',
+  description: 'Used for local development',
+});
+
+console.log('Created API Key:', apiKey.id);
+
+// Get all API keys
+const allKeys = await tonightpass.apiKeys.getAll();
+console.log(`Total API keys: ${allKeys.length}`);
+
+// Update the API key
+await tonightpass.apiKeys.update(apiKey.id, {
+  name: 'Development Key (Updated)',
+});
+
+// Delete the API key when no longer needed
+await tonightpass.apiKeys.delete(apiKey.id);
+```
+</CodeGroup>
+
+## Best Practices
+
+<Note>
+  - Store API keys securely using environment variables or a secrets manager
+  - Rotate API keys regularly for enhanced security
+  - Use descriptive names to identify the purpose of each key
+  - Delete unused API keys to minimize security risks
+</Note>

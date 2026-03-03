@@ -1,0 +1,312 @@
+---
+title: 'Channels DTOs'
+description: 'Data Transfer Objects for channel and message management'
+---
+
+## Overview
+
+Channels DTOs handle the creation and management of chat channels and messages in the Tonight Pass SDK. These include validation for private and group channels, message content, and reactions.
+
+---
+
+## CreateChannelDto
+
+Used to create a new channel (private or group).
+
+### Class Definition
+
+```typescript
+export class CreateChannelDto {
+  type: ChannelType;
+  participantUsernames: string[];
+  name?: string;
+}
+```
+
+### Properties
+
+<ParamField path="type" type="ChannelType" required>
+  The type of channel to create.
+  
+  **Valid values:**
+  - `ChannelType.Private` - Private 1-on-1 channel
+  - `ChannelType.Group` - Group channel with multiple participants
+</ParamField>
+
+<ParamField path="participantUsernames" type="string[]" required>
+  Array of participant usernames to add to the channel.
+  
+  **Validation:**
+  - Must contain at least 1 username
+  - For `Private` channels: Maximum 2 participants
+  - For `Group` channels: Minimum 3 participants, maximum 50 participants
+  - Each username must match the username format regex
+</ParamField>
+
+<ParamField path="name" type="string">
+  The name of the channel (required for group channels).
+  
+  **Validation:**
+  - Length: 1-100 characters
+  - Only validated for group channels
+</ParamField>
+
+### Example
+
+```typescript
+// Create a private channel
+const privateChannel: CreateChannelDto = {
+  type: ChannelType.Private,
+  participantUsernames: ["alice", "bob"]
+};
+
+// Create a group channel
+const groupChannel: CreateChannelDto = {
+  type: ChannelType.Group,
+  participantUsernames: ["alice", "bob", "charlie"],
+  name: "Team Discussion"
+};
+```
+
+---
+
+## UpdateChannelDto
+
+Used to update an existing channel.
+
+### Class Definition
+
+```typescript
+export class UpdateChannelDto {
+  name?: string;
+}
+```
+
+### Properties
+
+<ParamField path="name" type="string">
+  The new name for the channel.
+  
+  **Validation:**
+  - Length: 1-100 characters
+</ParamField>
+
+### Example
+
+```typescript
+const updateDto: UpdateChannelDto = {
+  name: "Updated Team Discussion"
+};
+```
+
+---
+
+## AddParticipantDto
+
+Used to add a participant to an existing channel.
+
+### Class Definition
+
+```typescript
+export class AddParticipantDto {
+  username: string;
+}
+```
+
+### Properties
+
+<ParamField path="username" type="string" required>
+  The username of the participant to add.
+  
+  **Validation:**
+  - Must match the username format regex
+</ParamField>
+
+### Example
+
+```typescript
+const addParticipant: AddParticipantDto = {
+  username: "newuser"
+};
+```
+
+---
+
+## CreateChannelMessageDto
+
+Used to create a new message in a channel.
+
+### Class Definition
+
+```typescript
+export class CreateChannelMessageDto {
+  content?: string;
+  attachments?: string[];
+  replyToId?: string;
+}
+```
+
+### Properties
+
+<ParamField path="content" type="string">
+  The text content of the message.
+  
+  **Validation:**
+  - Length: 1-1024 characters
+  - Either `content` or `attachments` must be provided
+</ParamField>
+
+<ParamField path="attachments" type="string[]">
+  Array of attachment URLs.
+  
+  **Validation:**
+  - Maximum 10 attachments
+  - Each URL must match the channel message attachment regex
+  - Either `content` or `attachments` must be provided
+</ParamField>
+
+<ParamField path="replyToId" type="string">
+  The MongoDB ID of the message being replied to.
+  
+  **Validation:**
+  - Must be a valid MongoDB ObjectId
+</ParamField>
+
+### Example
+
+```typescript
+// Text message
+const textMessage: CreateChannelMessageDto = {
+  content: "Hello, team!"
+};
+
+// Message with attachment
+const imageMessage: CreateChannelMessageDto = {
+  content: "Check this out",
+  attachments: ["https://cdn.tonightpass.com/messages/image.jpg"]
+};
+
+// Reply to another message
+const reply: CreateChannelMessageDto = {
+  content: "Great idea!",
+  replyToId: "507f1f77bcf86cd799439011"
+};
+```
+
+---
+
+## UpdateChannelMessageDto
+
+Used to update an existing message.
+
+### Class Definition
+
+```typescript
+export class UpdateChannelMessageDto {
+  content?: string;
+}
+```
+
+### Properties
+
+<ParamField path="content" type="string">
+  The updated text content of the message.
+  
+  **Validation:**
+  - Length: 1-1024 characters
+</ParamField>
+
+### Example
+
+```typescript
+const updateMessage: UpdateChannelMessageDto = {
+  content: "Updated message content"
+};
+```
+
+---
+
+## AddReactionDto
+
+Used to add an emoji reaction to a message.
+
+### Class Definition
+
+```typescript
+export class AddReactionDto {
+  emoji: string;
+}
+```
+
+### Properties
+
+<ParamField path="emoji" type="string" required>
+  The emoji to add as a reaction.
+  
+  **Validation:**
+  - Length: 1-10 characters
+</ParamField>
+
+### Example
+
+```typescript
+const reaction: AddReactionDto = {
+  emoji: "👍"
+};
+```
+
+---
+
+## ReportChannelMessageDto
+
+Used to report a message for violating community guidelines.
+
+### Class Definition
+
+```typescript
+export class ReportChannelMessageDto {
+  reason: ChannelMessageReportReason;
+  description?: string;
+}
+```
+
+### Properties
+
+<ParamField path="reason" type="ChannelMessageReportReason" required>
+  The reason for reporting the message.
+  
+  **Valid values:**
+  - `dislike` - General dislike
+  - `harassment_self` - Harassment targeting self
+  - `harassment_other` - Harassment targeting others
+  - `sexual_harassment_self` - Sexual harassment targeting self
+  - `nudes_self` - Unwanted nude images
+  - `sexual_content` - Sexual content
+  - `child_involved` - Child safety concern
+  - `threat_target` - Direct threat
+  - `violent_content` - Violent content
+  - `hate_speech` - Hate speech
+  - `terrorism` - Terrorism content
+  - `drug_sale` - Drug sale
+  - `weapon_sale` - Weapon sale
+  - `self_harm_concern` - Self-harm concern
+  - `self_harm_promotion` - Self-harm promotion
+  - `other` - Other reason
+</ParamField>
+
+<ParamField path="description" type="string">
+  Additional details about the report.
+  
+  **Validation:**
+  - Length: 1-500 characters
+  - Only validated if provided and not empty
+</ParamField>
+
+### Example
+
+```typescript
+const report: ReportChannelMessageDto = {
+  reason: ChannelMessageReportReason.HarassmentOther,
+  description: "This message contains harassment towards another user."
+};
+```

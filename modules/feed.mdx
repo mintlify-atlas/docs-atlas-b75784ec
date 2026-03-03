@@ -1,0 +1,219 @@
+---
+title: 'Feed'
+description: 'Access user feed content including following and discover feeds'
+icon: 'rss'
+---
+
+The Feed module provides methods to retrieve personalized feed content for users, including posts from followed accounts and discovery recommendations.
+
+## Available Methods
+
+### getFollowing
+
+Get the feed of posts from accounts the user follows.
+
+```typescript
+const followingFeed = await tonightpass.feed.getFollowing({
+  limit: 20,
+  offset: 0,
+});
+
+console.log(`Loaded ${followingFeed.length} posts`);
+```
+
+<ParamField path="options" type="ArrayOptions<FeedPost>">
+  <Expandable title="ArrayOptions properties">
+    <ParamField path="limit" type="number">
+      Maximum number of posts to return (default: 20)
+    </ParamField>
+    <ParamField path="offset" type="number">
+      Number of posts to skip for pagination (default: 0)
+    </ParamField>
+    <ParamField path="orderBy" type="string">
+      Field to order results by
+    </ParamField>
+    <ParamField path="orderDirection" type="'asc' | 'desc'">
+      Sort direction
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+**Returns:** `Promise<FeedPost[]>` - Array of posts from followed accounts
+
+---
+
+### getDiscover
+
+Get the discover feed with recommended posts.
+
+```typescript
+const discoverFeed = await tonightpass.feed.getDiscover({
+  limit: 20,
+  offset: 0,
+});
+
+console.log(`Discovered ${discoverFeed.length} posts`);
+```
+
+<ParamField path="options" type="ArrayOptions<FeedPost>">
+  Pagination and filtering options
+</ParamField>
+
+**Returns:** `Promise<FeedPost[]>` - Array of recommended posts
+
+<Note>
+  The discover feed uses an algorithm to recommend content based on user interests, trending topics, and popular posts.
+</Note>
+
+## FeedPost Type
+
+Both feed methods return `FeedPost` objects with the following structure:
+
+```typescript
+interface FeedPost {
+  id: string;
+  content: string;
+  author: UserIdentity;
+  createdAt: string;
+  updatedAt: string;
+  likes: number;
+  comments: number;
+  reposts: number;
+  media?: MediaAttachment[];
+  // ... additional fields
+}
+```
+
+## Usage Examples
+
+<CodeGroup>
+```typescript Following Feed
+import { TonightPass } from '@tonightpass/sdk';
+
+const tonightpass = new TonightPass({
+  apiKey: process.env.TONIGHTPASS_API_KEY,
+});
+
+// Get the latest posts from followed accounts
+const posts = await tonightpass.feed.getFollowing({
+  limit: 10,
+});
+
+posts.forEach(post => {
+  console.log(`@${post.author.username}: ${post.content}`);
+  console.log(`Likes: ${post.likes}, Comments: ${post.comments}\n`);
+});
+```
+
+```typescript Discover Feed
+import { TonightPass } from '@tonightpass/sdk';
+
+const tonightpass = new TonightPass({
+  apiKey: process.env.TONIGHTPASS_API_KEY,
+});
+
+// Get recommended posts
+const discoverPosts = await tonightpass.feed.getDiscover({
+  limit: 15,
+});
+
+console.log('Discover Feed:');
+discoverPosts.forEach((post, index) => {
+  console.log(`${index + 1}. ${post.content}`);
+  console.log(`   by @${post.author.username}`);
+});
+```
+
+```typescript Infinite Scroll Implementation
+import { TonightPass } from '@tonightpass/sdk';
+
+const tonightpass = new TonightPass({
+  apiKey: process.env.TONIGHTPASS_API_KEY,
+});
+
+let offset = 0;
+const limit = 20;
+
+async function loadMorePosts() {
+  const posts = await tonightpass.feed.getFollowing({
+    limit,
+    offset,
+  });
+  
+  if (posts.length > 0) {
+    // Render posts to UI
+    renderPosts(posts);
+    offset += posts.length;
+  } else {
+    console.log('No more posts to load');
+  }
+}
+
+// Load initial posts
+await loadMorePosts();
+
+// Load more when user scrolls
+window.addEventListener('scroll', () => {
+  if (nearBottomOfPage()) {
+    loadMorePosts();
+  }
+});
+```
+
+```typescript Combined Feed View
+import { TonightPass } from '@tonightpass/sdk';
+
+const tonightpass = new TonightPass({
+  apiKey: process.env.TONIGHTPASS_API_KEY,
+});
+
+type FeedType = 'following' | 'discover';
+
+class FeedManager {
+  private currentFeed: FeedType = 'following';
+  
+  async loadFeed(type: FeedType = this.currentFeed) {
+    this.currentFeed = type;
+    
+    const posts = type === 'following'
+      ? await tonightpass.feed.getFollowing({ limit: 20 })
+      : await tonightpass.feed.getDiscover({ limit: 20 });
+    
+    return posts;
+  }
+  
+  switchFeed(type: FeedType) {
+    return this.loadFeed(type);
+  }
+}
+
+// Usage
+const feedManager = new FeedManager();
+
+// Load following feed
+const followingPosts = await feedManager.loadFeed('following');
+
+// Switch to discover feed
+const discoverPosts = await feedManager.switchFeed('discover');
+```
+</CodeGroup>
+
+## Best Practices
+
+<Tip>
+  - Implement pagination to avoid loading too many posts at once
+  - Cache feed data locally to improve performance and reduce API calls
+  - Use appropriate loading states while fetching feed content
+  - Consider implementing pull-to-refresh functionality
+  - Show skeleton loaders for better user experience
+</Tip>
+
+<Note>
+  The feed endpoints require user authentication. Make sure the user is signed in before calling these methods.
+</Note>
+
+## Related Modules
+
+- [Users](/modules/users) - Manage user posts and interactions
+- [Profiles](/modules/profiles) - Follow/unfollow users to customize your feed
+- [Organizations](/modules/organizations) - Access organization content in feeds

@@ -1,0 +1,407 @@
+---
+title: "Migration Guide"
+description: "Migrate between versions of Tonight Pass SDK"
+icon: "arrows-turn-to-dots"
+---
+
+This guide helps you upgrade to newer versions of the Tonight Pass SDK and understand breaking changes.
+
+## Current Version
+
+The latest version is **0.0.237**. Check the [CHANGELOG](https://github.com/tonightpass/tonightpass/blob/main/packages/node/CHANGELOG.md) for detailed release notes.
+
+<Note>
+  The SDK follows [semantic versioning](https://semver.org/). Patch versions (0.0.x) may include breaking changes during the pre-1.0 phase.
+</Note>
+
+## Recent Breaking Changes
+
+### v0.0.229 - Authentication Response Structure
+
+<Warning>
+  This is a breaking change for authentication endpoints.
+</Warning>
+
+The sign-in and sign-up endpoints now return `AuthResponse` instead of `User`:
+
+<CodeGroup>
+```typescript Before (v0.0.228 and earlier)
+const response = await tnp.auth.signIn({
+  email: "user@example.com",
+  password: "password"
+});
+
+// response.data was User
+const user = response.data;
+```
+
+```typescript After (v0.0.229+)
+const response = await tnp.auth.signIn({
+  email: "user@example.com",
+  password: "password"
+});
+
+// response.data is now AuthResponse
+const { user, accessToken, refreshToken } = response.data;
+```
+</CodeGroup>
+
+**Migration steps:**
+
+1. Update sign-in/sign-up handlers to destructure the response:
+   ```typescript
+   const { user, accessToken, refreshToken } = response.data;
+   ```
+
+2. Store tokens for mobile applications:
+   ```typescript
+   // Mobile apps can now extract tokens
+   await AsyncStorage.setItem('accessToken', accessToken);
+   await AsyncStorage.setItem('refreshToken', refreshToken);
+   ```
+
+3. Web applications continue using cookies (no changes needed)
+
+### v0.0.226 - WebSocket Platform Compatibility
+
+WebSocket implementation changed from Node.js-specific to universal:
+
+<Tabs>
+  <Tab title="Before">
+    ```typescript
+    // Used 'ws' package (Node.js only)
+    import WebSocket from 'ws';
+    
+    // Custom headers for authentication
+    const ws = new WebSocket(url, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    ```
+  </Tab>
+
+  <Tab title="After">
+    ```typescript
+    // Native WebSocket API (universal)
+    const ws = new WebSocket(url, [`access_token.${token}`]);
+    
+    // Authentication via subprotocol
+    // Works in Node.js, browser, and React Native
+    ```
+  </Tab>
+</Tabs>
+
+**Migration steps:**
+
+1. Remove any custom WebSocket configuration
+2. Pass authentication token as connection parameter:
+   ```typescript
+   await ws.connect(channelId, accessToken);
+   ```
+
+### v0.0.223 - Route Pattern Changes
+
+<Warning>
+  Breaking change in URL patterns to prevent route collisions.
+</Warning>
+
+Route identifiers changed to use `@` for public identifiers and `~` for contextual routes:
+
+| Old Pattern | New Pattern | Description |
+|------------|-------------|-------------|
+| `/users/:username` | `/users/@:username` | User profiles |
+| `/organizations/:slug` | `/organizations/@:slug` | Organizations |
+| `/profiles/:username` | `/profiles/@:username` | Public profiles |
+| `/users/@me` | `/users/~me` | Current user |
+| `/channels/@me` | `/channels/~me` | User channels |
+
+**Migration steps:**
+
+1. Update all direct API calls to use new patterns:
+   ```typescript
+   // Before
+   const user = await client.get("/users/:username", { username: "john" });
+   
+   // After
+   const user = await client.get("/users/@:username", { username: "john" });
+   ```
+
+2. Update SDK method calls (handles patterns automatically):
+   ```typescript
+   // SDK methods handle the new patterns automatically
+   const user = await tnp.users.get("john"); // Works with v0.0.223+
+   ```
+
+### v0.0.209 - Cache Support
+
+Added in-memory caching for REST requests:
+
+```typescript
+const tnp = new TonightPass({
+  baseURL: "https://api.tonightpass.com",
+  apiKey: "your-api-key",
+  cache: {
+    enabled: true,
+    ttl: 60000, // 1 minute
+    methods: ["GET"] // Only cache GET requests
+  }
+});
+
+// Clear cache when needed
+tnp.client.clearCache();
+
+// Get cache statistics
+const stats = tnp.client.getCacheStats();
+```
+
+### v0.0.185 - Social Links Structure
+
+<Warning>
+  Breaking change in social links structure.
+</Warning>
+
+<Tabs>
+  <Tab title="Before">
+    ```typescript
+    // Complex structure with type enum
+    organization.identity.socialLinks = [
+      { type: "Facebook", url: "https://facebook.com/..." },
+      { type: "Twitter", url: "https://twitter.com/..." }
+    ];
+    ```
+  </Tab>
+
+  <Tab title="After">
+    ```typescript
+    // Simple string array
+    organization.identity.links = [
+      "https://facebook.com/...",
+      "https://twitter.com/..."
+    ];
+    
+    // Detect platform on frontend based on URL
+    ```
+  </Tab>
+</Tabs>
+
+**Migration steps:**
+
+1. Replace `socialLinks` with `links`:
+   ```typescript
+   const links = organization.identity.socialLinks.map(link => link.url);
+   organization.identity.links = links;
+   ```
+
+2. Update DTOs:
+   ```typescript
+   await tnp.organizations.update(slug, {
+     links: ["https://facebook.com/...", "https://twitter.com/..."]
+   });
+   ```
+
+## Version Compatibility
+
+### TypeScript Support
+
+<Info>
+  The SDK requires **TypeScript 5.0+** for optimal type inference.
+</Info>
+
+```json package.json
+{
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}
+```
+
+### Node.js Support
+
+Minimum Node.js version: **18.0.0**
+
+```bash
+node --version
+# Should output v18.0.0 or higher
+```
+
+### React Support
+
+For React hooks, you need:
+
+- React 18.0+
+- SWR 2.0+ (for `tonightpass/react` hooks)
+
+```json package.json
+{
+  "dependencies": {
+    "react": "^18.0.0",
+    "swr": "^2.0.0",
+    "tonightpass": "latest"
+  }
+}
+```
+
+## Upgrade Best Practices
+
+<Steps>
+  <Step title="Review the Changelog">
+    Always check the [CHANGELOG](https://github.com/tonightpass/tonightpass/blob/main/packages/node/CHANGELOG.md) for breaking changes:
+    
+    ```bash
+    # View changes between versions
+    git log --oneline v0.0.200..v0.0.237
+    ```
+  </Step>
+
+  <Step title="Update Dependencies">
+    Update to the latest version:
+    
+    ```bash
+    npm install tonightpass@latest
+    # or
+    yarn add tonightpass@latest
+    # or
+    pnpm add tonightpass@latest
+    ```
+  </Step>
+
+  <Step title="Run Type Checking">
+    Compile your TypeScript to catch type errors:
+    
+    ```bash
+    npx tsc --noEmit
+    ```
+  </Step>
+
+  <Step title="Test Authentication">
+    Test authentication flows first (most common breaking changes):
+    
+    ```typescript
+    // Test sign-in
+    const { user, accessToken } = await tnp.auth.signIn(credentials);
+    
+    // Test token refresh
+    await tnp.auth.refreshToken();
+    ```
+  </Step>
+
+  <Step title="Test WebSocket Connections">
+    Verify WebSocket functionality:
+    
+    ```typescript
+    const ws = channelsWS({ debug: true });
+    await ws.connect(channelId, token);
+    ```
+  </Step>
+
+  <Step title="Run Integration Tests">
+    Run your test suite:
+    
+    ```bash
+    npm test
+    ```
+  </Step>
+</Steps>
+
+## Common Migration Issues
+
+<Accordion title="Property 'socialLinks' does not exist">
+  **Error:**
+  ```
+  Property 'socialLinks' does not exist on type 'OrganizationIdentity'
+  ```
+
+  **Solution:**
+  Replace with `links` property (v0.0.185+):
+  ```typescript
+  // Before
+  organization.identity.socialLinks
+  
+  // After
+  organization.identity.links
+  ```
+</Accordion>
+
+<Accordion title="Type 'User' is not assignable to type 'AuthResponse'">
+  **Error:**
+  ```
+  Type 'User' is not assignable to type 'AuthResponse'
+  ```
+
+  **Solution:**
+  Destructure the auth response (v0.0.229+):
+  ```typescript
+  const { user, accessToken, refreshToken } = response.data;
+  ```
+</Accordion>
+
+<Accordion title="Cannot find module 'ws'">
+  **Error:**
+  ```
+  Cannot find module 'ws'
+  ```
+
+  **Solution:**
+  Remove the `ws` dependency (v0.0.226+ uses native WebSocket):
+  ```bash
+  npm uninstall ws
+  ```
+</Accordion>
+
+<Accordion title="404 on API routes">
+  **Error:**
+  ```
+  404 Not Found on /users/:username
+  ```
+
+  **Solution:**
+  Update route patterns to use new format (v0.0.223+):
+  ```typescript
+  // Use /users/@:username instead of /users/:username
+  const user = await tnp.users.get("username");
+  ```
+</Accordion>
+
+## Getting Help
+
+<CardGroup cols={2}>
+  <Card title="GitHub Issues" icon="github" href="https://github.com/tonightpass/tonightpass/issues">
+    Report bugs or request features
+  </Card>
+
+  <Card title="Changelog" icon="list" href="https://github.com/tonightpass/tonightpass/blob/main/packages/node/CHANGELOG.md">
+    View all version changes
+  </Card>
+
+  <Card title="API Documentation" icon="book" href="/api/client">
+    Browse API reference
+  </Card>
+
+  <Card title="Discord Community" icon="discord" href="https://discord.gg/tonightpass">
+    Get help from the community
+  </Card>
+</CardGroup>
+
+## Deprecation Policy
+
+<Info>
+  During the pre-1.0 phase, features may be deprecated with one minor version notice.
+</Info>
+
+When features are deprecated:
+
+1. **Deprecation notice** is added to the changelog
+2. **Warning logs** appear in development mode
+3. **Alternative approach** is documented
+4. Feature is **removed** in the next minor version
+
+**Example:**
+
+```typescript
+// v0.0.180 - Deprecated
+tnp.users.getSocialLinks(); // ⚠️ Warning: Deprecated, use users.getLinks()
+
+// v0.0.185 - Removed
+tnp.users.getLinks(); // ✅ Use this instead
+```

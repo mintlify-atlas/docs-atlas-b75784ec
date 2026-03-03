@@ -1,0 +1,505 @@
+---
+title: 'Users DTOs'
+description: 'Data Transfer Objects for user authentication and profile management'
+---
+
+## Overview
+
+Users DTOs handle user registration, authentication, profile updates, and account recovery in the Tonight Pass SDK. These include comprehensive validation for user data and secure password requirements.
+
+---
+
+## CreateUserDto
+
+Used to register a new user account.
+
+### Class Definition
+
+```typescript
+export class CreateUserDto {
+  identifier: CreateUserIdentifierDto;
+  identity: CreateUserIdentityDto;
+  password: string;
+}
+```
+
+### Properties
+
+<ParamField path="identifier" type="CreateUserIdentifierDto" required>
+  The user's identifier information (email, phone, username).
+</ParamField>
+
+<ParamField path="identity" type="CreateUserIdentityDto" required>
+  The user's identity information (name, gender, birth date, etc.).
+</ParamField>
+
+<ParamField path="password" type="string" required>
+  The user's password.
+  
+  **Validation:**
+  - Must be at least 8 characters long
+  - Must contain at least one uppercase letter
+  - Must contain at least one lowercase letter
+  - Must be secure (additional password complexity requirements)
+</ParamField>
+
+### Example
+
+```typescript
+const createUser: CreateUserDto = {
+  identifier: {
+    email: "alice@example.com",
+    username: "alice"
+  },
+  identity: {
+    firstName: "Alice",
+    lastName: "Smith",
+    gender: UserIdentityGender.Female,
+    birthDate: new Date("1990-01-01")
+  },
+  password: "SecurePassword123"
+};
+```
+
+---
+
+## CreateUserIdentifierDto
+
+Used to define a user's identifier during registration.
+
+### Class Definition
+
+```typescript
+class CreateUserIdentifierDto {
+  email?: string;
+  phoneNumber?: string;
+  username: string;
+}
+```
+
+### Properties
+
+<ParamField path="email" type="string">
+  The user's email address.
+  
+  **Validation:**
+  - Must be a valid email format
+</ParamField>
+
+<ParamField path="phoneNumber" type="string">
+  The user's phone number.
+  
+  **Validation:**
+  - Must be a valid phone number format
+</ParamField>
+
+<ParamField path="username" type="string" required>
+  The user's unique username.
+  
+  **Validation:**
+  - Must be lowercase
+  - Length: 3-48 characters
+  - Must match the username format regex
+</ParamField>
+
+---
+
+## CreateUserIdentityDto
+
+Used to define a user's identity during registration.
+
+### Class Definition
+
+```typescript
+export class CreateUserIdentityDto {
+  firstName: string;
+  lastName: string;
+  gender: UserIdentityGender;
+  avatarUrl?: string;
+  birthDate: Date;
+  links?: string[];
+}
+```
+
+### Properties
+
+<ParamField path="firstName" type="string" required>
+  The user's first name.
+  
+  **Validation:**
+  - Length: 2-32 characters
+  - Must be composed of letters only
+</ParamField>
+
+<ParamField path="lastName" type="string" required>
+  The user's last name.
+  
+  **Validation:**
+  - Length: 2-32 characters
+  - Must be composed of letters only
+</ParamField>
+
+<ParamField path="gender" type="UserIdentityGender" required>
+  The user's gender.
+  
+  **Valid values:**
+  - `UserIdentityGender.Male`
+  - `UserIdentityGender.Female`
+  - `UserIdentityGender.NonBinary`
+</ParamField>
+
+<ParamField path="avatarUrl" type="string">
+  URL to the user's avatar image.
+  
+  **Validation:**
+  - Must match the user avatar URL regex pattern for creation
+</ParamField>
+
+<ParamField path="birthDate" type="Date" required>
+  The user's date of birth.
+  
+  **Validation:**
+  - Must be a valid date
+</ParamField>
+
+<ParamField path="links" type="string[]">
+  Array of links to the user's social media or website.
+  
+  **Validation:**
+  - Maximum 5 links
+  - Each must be a valid URL
+</ParamField>
+
+---
+
+## UpdateUserDto
+
+Used to update an existing user's profile.
+
+### Class Definition
+
+```typescript
+export class UpdateUserDto {
+  identifier?: UpdateUserIdentifierDto;
+  identity?: UpdateUserIdentityDto;
+  password?: string;
+}
+```
+
+### Properties
+
+<ParamField path="identifier" type="UpdateUserIdentifierDto">
+  Updated identifier information.
+</ParamField>
+
+<ParamField path="identity" type="UpdateUserIdentityDto">
+  Updated identity information.
+</ParamField>
+
+<ParamField path="password" type="string">
+  The new password.
+  
+  **Validation:**
+  - Must be at least 8 characters long
+  - Must contain at least one uppercase letter
+  - Must contain at least one lowercase letter
+  - Must be secure (additional password complexity requirements)
+</ParamField>
+
+### Example
+
+```typescript
+const updateUser: UpdateUserDto = {
+  identity: {
+    displayName: "Alice S.",
+    description: "Software developer and tech enthusiast"
+  }
+};
+```
+
+---
+
+## UpdateUserIdentifierDto
+
+Used to update a user's identifier information.
+
+### Class Definition
+
+```typescript
+class UpdateUserIdentifierDto {
+  email?: string;
+  phoneNumber?: string;
+  username?: string;
+}
+```
+
+### Properties
+
+<ParamField path="email" type="string">
+  Updated email address.
+  
+  **Validation:**
+  - Must be a valid email format
+</ParamField>
+
+<ParamField path="phoneNumber" type="string">
+  Updated phone number.
+  
+  **Validation:**
+  - Must be a valid phone number format
+</ParamField>
+
+<ParamField path="username" type="string">
+  Updated username.
+  
+  **Validation:**
+  - Must be lowercase
+  - Length: 3-48 characters
+  - Must match the username format regex
+</ParamField>
+
+---
+
+## UpdateUserIdentityDto
+
+Used to update a user's identity information.
+
+### Class Definition
+
+```typescript
+class UpdateUserIdentityDto {
+  firstName?: string;
+  lastName?: string;
+  displayName?: string;
+  description?: string;
+  avatarUrl?: string | undefined;
+  bannerUrl?: string | undefined;
+  gender?: UserIdentityGender;
+  birthDate?: Date;
+  links?: string[];
+}
+```
+
+### Properties
+
+<ParamField path="firstName" type="string">
+  Updated first name.
+  
+  **Validation:**
+  - Length: 2-32 characters
+  - Must be composed of letters only
+</ParamField>
+
+<ParamField path="lastName" type="string">
+  Updated last name.
+  
+  **Validation:**
+  - Length: 2-32 characters
+  - Must be composed of letters only
+</ParamField>
+
+<ParamField path="displayName" type="string">
+  Public display name.
+  
+  **Validation:**
+  - Length: 1-32 characters
+</ParamField>
+
+<ParamField path="description" type="string">
+  User bio or description.
+  
+  **Validation:**
+  - Length: 1-128 characters
+</ParamField>
+
+<ParamField path="avatarUrl" type="string | undefined">
+  Updated avatar URL. Can be set to `undefined` to remove the avatar.
+  
+  **Validation:**
+  - Must match the user avatar URL regex pattern
+</ParamField>
+
+<ParamField path="bannerUrl" type="string | undefined">
+  Updated banner URL. Can be set to `undefined` to remove the banner.
+  
+  **Validation:**
+  - Must match the user banner URL regex pattern
+</ParamField>
+
+<ParamField path="gender" type="UserIdentityGender">
+  Updated gender.
+  
+  **Valid values:**
+  - `UserIdentityGender.Male`
+  - `UserIdentityGender.Female`
+  - `UserIdentityGender.NonBinary`
+</ParamField>
+
+<ParamField path="birthDate" type="Date">
+  Updated date of birth.
+  
+  **Validation:**
+  - Must be a valid date
+</ParamField>
+
+<ParamField path="links" type="string[]">
+  Updated array of links.
+  
+  **Validation:**
+  - Maximum 5 links
+  - Each must be a valid URL
+</ParamField>
+
+---
+
+## SignInUserDto
+
+Used to authenticate a user.
+
+### Class Definition
+
+```typescript
+export class SignInUserDto {
+  identifier: string;
+  password: string;
+}
+```
+
+### Properties
+
+<ParamField path="identifier" type="string" required>
+  The user's identifier (username, email, or phone number).
+  
+  **Validation:**
+  - Must not be empty
+</ParamField>
+
+<ParamField path="password" type="string" required>
+  The user's password.
+  
+  **Validation:**
+  - Must not be empty
+</ParamField>
+
+### Example
+
+```typescript
+const signIn: SignInUserDto = {
+  identifier: "alice",
+  password: "SecurePassword123"
+};
+```
+
+---
+
+## RecoveryDto
+
+Used to initiate password recovery.
+
+### Class Definition
+
+```typescript
+export class RecoveryDto {
+  identifier: string;
+}
+```
+
+### Properties
+
+<ParamField path="identifier" type="string" required>
+  The user's identifier (username, email, or phone number).
+  
+  **Validation:**
+  - Must not be empty
+</ParamField>
+
+### Example
+
+```typescript
+const recovery: RecoveryDto = {
+  identifier: "alice@example.com"
+};
+```
+
+---
+
+## RecoveryResetDto
+
+Used to reset password with a recovery token.
+
+### Class Definition
+
+```typescript
+export class RecoveryResetDto {
+  tokenId: string;
+  tokenValue: string;
+  password: string;
+}
+```
+
+### Properties
+
+<ParamField path="tokenId" type="string" required>
+  The ID of the recovery token.
+  
+  **Validation:**
+  - Must not be empty
+</ParamField>
+
+<ParamField path="tokenValue" type="string" required>
+  The value of the recovery token.
+  
+  **Validation:**
+  - Must not be empty
+</ParamField>
+
+<ParamField path="password" type="string" required>
+  The new password.
+  
+  **Validation:**
+  - Must be at least 8 characters long
+  - Must contain at least one uppercase letter
+  - Must contain at least one lowercase letter
+  - Must be secure (additional password complexity requirements)
+</ParamField>
+
+### Example
+
+```typescript
+const resetPassword: RecoveryResetDto = {
+  tokenId: "rec_1234567890",
+  tokenValue: "abcdef123456",
+  password: "NewSecurePassword123"
+};
+```
+
+---
+
+## GoogleOneTapDto
+
+Used for Google One Tap authentication.
+
+### Class Definition
+
+```typescript
+export class GoogleOneTapDto {
+  credential: string;
+}
+```
+
+### Properties
+
+<ParamField path="credential" type="string" required>
+  The Google One Tap credential JWT token.
+  
+  **Validation:**
+  - Must not be empty
+</ParamField>
+
+### Example
+
+```typescript
+const googleAuth: GoogleOneTapDto = {
+  credential: "eyJhbGciOiJSUzI1NiIsImtpZCI6IjFlOWdkazcifQ..."
+};
+```

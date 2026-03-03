@@ -1,80 +1,362 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quickstart
+description: Get started with Tonight Pass SDK in minutes
 ---
 
-## Get started in three steps
+## Initialize the Client
 
-Get your documentation site running locally and make your first customization.
+The Tonight Pass SDK provides a unified client for accessing all API endpoints. Initialize the client with your configuration:
 
-### Step 1: Set up your local environment
-
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
+<Steps>
+  <Step title="Import the TonightPass class">
     
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
+    Import the main `TonightPass` class from the `tonightpass` package:
+
+    ```typescript
+    import { TonightPass } from 'tonightpass';
+    ```
+
+  </Step>
+
+  <Step title="Create a new instance">
     
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+    Create a new instance of the client with your configuration. The client accepts a `ClientOptions` object:
 
-### Step 2: Deploy your changes
+    ```typescript
+    const tnp = new TonightPass({
+      baseURL: 'https://api.tonightpass.com',
+      apiKey: 'your-api-key', // Optional
+      accessToken: 'your-access-token', // Optional
+      cache: { // Optional caching configuration
+        enabled: true,
+        ttl: 60000 // Cache TTL in milliseconds
+      }
+    });
+    ```
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
+    <Note>
+    Currently, API keys are for internal use only. Future versions will support public API keys.
+    </Note>
+
+  </Step>
+
+  <Step title="Make your first API call">
     
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+    Let's start with a simple health check to verify the API is accessible:
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+    ```typescript
+    // Check API health
+    const health = await tnp.health.api();
+    console.log('API Status:', health);
+    ```
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+    You can also check the database and app health:
 
-### Step 3: Go live
+    ```typescript
+    // Check database health
+    const dbHealth = await tnp.health.database();
+    console.log('Database Status:', dbHealth);
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+    // Check all health endpoints
+    const allHealth = await tnp.health.getAll();
+    console.log('All Health Checks:', allHealth);
+    ```
 
-## Next steps
+  </Step>
 
-Now that you have your docs running, explore these key features:
+  <Step title="Explore available resources">
+    
+    The SDK provides organized access to all Tonight Pass API resources:
+
+    ```typescript
+    // User management
+    const currentUser = await tnp.users.me();
+    console.log('Current User:', currentUser);
+
+    // Get a specific user
+    const user = await tnp.users.get('user-id');
+    console.log('User:', user);
+
+    // Check username availability
+    const available = await tnp.users.check('username', true);
+    console.log('Username Available:', available);
+    ```
+
+  </Step>
+</Steps>
+
+## Authentication
+
+Tonight Pass SDK supports multiple authentication methods:
+
+### Sign In
+
+```typescript
+const response = await tnp.auth.signIn({
+  email: 'user@example.com',
+  password: 'your-password'
+});
+
+if (response.success) {
+  // Update client with access token
+  tnp.client.setAccessToken(response.data.accessToken);
+}
+```
+
+### Sign Up
+
+```typescript
+const response = await tnp.auth.signUp({
+  email: 'user@example.com',
+  username: 'username',
+  password: 'your-password',
+  firstName: 'John',
+  lastName: 'Doe'
+});
+
+if (response.success) {
+  console.log('Account created successfully');
+}
+```
+
+### OAuth2
+
+Connect with OAuth2 providers like Google:
+
+```typescript
+// Get OAuth2 authorization URL
+const authUrl = tnp.auth.oauth2.connect('google', {
+  redirectUri: 'https://yourapp.com/callback'
+});
+
+// Redirect user to authUrl
+window.location.href = authUrl;
+
+// After callback, handle Google One Tap
+const response = await tnp.auth.oauth2.googleOneTap({
+  credential: 'google-credential-token'
+});
+```
+
+### Refresh Token
+
+```typescript
+const response = await tnp.auth.refreshToken();
+
+if (response.success) {
+  tnp.client.setAccessToken(response.data.accessToken);
+}
+```
+
+## Using with React
+
+The `@tonightpass/react` package provides React hooks powered by SWR for data fetching:
+
+<Steps>
+  <Step title="Install React SDK">
+    
+    ```bash
+    npm install @tonightpass/react
+    ```
+
+  </Step>
+
+  <Step title="Use the useAPI hook">
+    
+    The `useAPI` hook automatically handles caching, revalidation, and error handling:
+
+    ```typescript
+    import { useAPI } from '@tonightpass/react';
+
+    function UserProfile({ userId }: { userId: string }) {
+      const { data, error, isLoading } = useAPI('/users/@:userId', { userId });
+
+      if (isLoading) return <div>Loading...</div>;
+      if (error) return <div>Error: {error.message}</div>;
+
+      return (
+        <div>
+          <h1>{data.username}</h1>
+          <p>{data.email}</p>
+        </div>
+      );
+    }
+    ```
+
+  </Step>
+
+  <Step title="Configure the client">
+    
+    Set the access token for authenticated requests:
+
+    ```typescript
+    import { client } from '@tonightpass/react';
+
+    // After authentication
+    client.setAccessToken('your-access-token');
+    ```
+
+  </Step>
+</Steps>
+
+## Working with Organizations
+
+Manage organizations and events:
+
+```typescript
+// Get all organizations
+const organizations = await tnp.organizations.getAll();
+
+// Get a specific organization
+const org = await tnp.organizations.get('org-id');
+
+// Get organization events
+const events = await tnp.organizations.events.getAll('org-id');
+
+// Get a specific event
+const event = await tnp.organizations.events.get('org-id', 'event-id');
+```
+
+## Handling Responses
+
+All SDK methods return responses in a consistent format:
+
+```typescript
+type SuccessfulAPIResponse<T> = {
+  success: true;
+  data: T;
+};
+
+type ErroredAPIResponse = {
+  success: false;
+  message: string;
+  statusCode: number;
+  errors?: {
+    [key: string]: string[];
+  };
+};
+```
+
+Example with error handling:
+
+```typescript
+try {
+  const user = await tnp.users.me();
+  console.log('User:', user);
+} catch (error) {
+  if (error instanceof TonightPassAPIError) {
+    console.error('API Error:', error.message);
+    console.error('Status:', error.status);
+    console.error('Errors:', error.data.errors);
+  }
+}
+```
+
+## Caching
+
+Enable response caching to improve performance:
+
+```typescript
+const tnp = new TonightPass({
+  baseURL: 'https://api.tonightpass.com',
+  cache: {
+    enabled: true,
+    ttl: 60000, // Cache for 60 seconds
+    maxSize: 100 // Maximum cache entries
+  }
+});
+
+// Clear cache manually
+tnp.client.clearCache();
+
+// Get cache statistics
+const stats = tnp.client.getCacheStats();
+console.log('Cache stats:', stats);
+```
+
+## Next Steps
+
+Now that you've made your first API calls, explore more features:
 
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card
+    title="API Reference"
+    icon="code"
+    href="/api/client"
+  >
+    Explore all available endpoints
+  </Card>
+  <Card
+    title="Authentication"
+    icon="lock"
+    href="/core/authentication"
+  >
+    Learn about authentication methods
+  </Card>
+  <Card
+    title="User Management"
+    icon="users"
+    href="/modules/users"
+  >
+    Manage user profiles and data
+  </Card>
+  <Card
+    title="Organizations"
+    icon="building"
+    href="/modules/organizations"
+  >
+    Create and manage organizations
+  </Card>
 </CardGroup>
 
+## Full Example
+
+Here's a complete example putting it all together:
+
+```typescript
+import { TonightPass } from 'tonightpass';
+
+async function main() {
+  // Initialize client
+  const tnp = new TonightPass({
+    baseURL: 'https://api.tonightpass.com',
+    cache: {
+      enabled: true,
+      ttl: 60000
+    }
+  });
+
+  try {
+    // Check API health
+    const health = await tnp.health.api();
+    console.log('API Status:', health);
+
+    // Sign in
+    const signInResponse = await tnp.auth.signIn({
+      email: 'user@example.com',
+      password: 'password'
+    });
+
+    if (signInResponse.success) {
+      // Set access token
+      tnp.client.setAccessToken(signInResponse.data.accessToken);
+
+      // Get current user
+      const user = await tnp.users.me();
+      console.log('Welcome,', user.username);
+
+      // Get user's organizations
+      const orgs = await tnp.organizations.getAll();
+      console.log('Your organizations:', orgs);
+    }
+  } catch (error) {
+    console.error('Error:', error);
+  }
+}
+
+main();
+```
+
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+Remember to handle errors appropriately in production applications and never commit sensitive credentials to version control.
 </Note>

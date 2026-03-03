@@ -1,0 +1,316 @@
+---
+title: 'Health'
+description: 'Check the health status of Tonight Pass API services'
+icon: 'heart-pulse'
+---
+
+The Health module provides methods to monitor the status of Tonight Pass API services, including the database, API, and application layers.
+
+## Available Methods
+
+### getAll
+
+Get overall health status of all services.
+
+```typescript
+const health = await tonightpass.health.getAll();
+console.log('System Health:', health);
+```
+
+**Returns:** `Promise<HealthStatus>` - Overall system health information
+
+---
+
+### database
+
+Check the health status of the database service.
+
+```typescript
+const dbHealth = await tonightpass.health.database();
+console.log('Database Status:', dbHealth);
+```
+
+**Returns:** `Promise<ServiceHealth>` - Database health information
+
+---
+
+### api
+
+Check the health status of the API service.
+
+```typescript
+const apiHealth = await tonightpass.health.api();
+console.log('API Status:', apiHealth);
+```
+
+**Returns:** `Promise<ServiceHealth>` - API health information
+
+---
+
+### app
+
+Check the health status of the application service.
+
+```typescript
+const appHealth = await tonightpass.health.app();
+console.log('App Status:', appHealth);
+```
+
+**Returns:** `Promise<ServiceHealth>` - Application health information
+
+## Health Status Response
+
+Health check responses typically include:
+
+```typescript
+interface ServiceHealth {
+  status: 'healthy' | 'degraded' | 'unhealthy';
+  timestamp: string;
+  responseTime?: number;
+  details?: {
+    uptime?: number;
+    version?: string;
+    [key: string]: any;
+  };
+}
+```
+
+## Usage Examples
+
+<CodeGroup>
+```typescript Basic Health Check
+import { TonightPass } from '@tonightpass/sdk';
+
+const tonightpass = new TonightPass({
+  apiKey: process.env.TONIGHTPASS_API_KEY,
+});
+
+// Check overall system health
+const systemHealth = await tonightpass.health.getAll();
+
+if (systemHealth.status === 'healthy') {
+  console.log('All systems operational');
+} else {
+  console.warn('System health degraded:', systemHealth);
+}
+```
+
+```typescript Individual Service Checks
+import { TonightPass } from '@tonightpass/sdk';
+
+const tonightpass = new TonightPass({
+  apiKey: process.env.TONIGHTPASS_API_KEY,
+});
+
+async function checkServices() {
+  // Check each service individually
+  const [db, api, app] = await Promise.all([
+    tonightpass.health.database(),
+    tonightpass.health.api(),
+    tonightpass.health.app(),
+  ]);
+  
+  console.log('Service Status:');
+  console.log(`Database: ${db.status}`);
+  console.log(`API: ${api.status}`);
+  console.log(`Application: ${app.status}`);
+  
+  return {
+    database: db,
+    api: api,
+    application: app,
+    allHealthy: 
+      db.status === 'healthy' && 
+      api.status === 'healthy' && 
+      app.status === 'healthy',
+  };
+}
+
+const status = await checkServices();
+if (!status.allHealthy) {
+  console.error('One or more services are unhealthy');
+}
+```
+
+```typescript Monitoring Dashboard
+import { TonightPass } from '@tonightpass/sdk';
+
+const tonightpass = new TonightPass({
+  apiKey: process.env.TONIGHTPASS_API_KEY,
+});
+
+class HealthMonitor {
+  private checkInterval: NodeJS.Timeout | null = null;
+  
+  startMonitoring(intervalMs: number = 30000) {
+    console.log('Starting health monitoring...');
+    
+    // Check immediately
+    this.performHealthCheck();
+    
+    // Then check at regular intervals
+    this.checkInterval = setInterval(() => {
+      this.performHealthCheck();
+    }, intervalMs);
+  }
+  
+  stopMonitoring() {
+    if (this.checkInterval) {
+      clearInterval(this.checkInterval);
+      console.log('Health monitoring stopped');
+    }
+  }
+  
+  private async performHealthCheck() {
+    try {
+      const startTime = Date.now();
+      const health = await tonightpass.health.getAll();
+      const responseTime = Date.now() - startTime;
+      
+      console.log(`[${new Date().toISOString()}] Health Check:`);
+      console.log(`  Status: ${health.status}`);
+      console.log(`  Response Time: ${responseTime}ms`);
+      
+      if (health.status !== 'healthy') {
+        this.alertOnUnhealthyStatus(health);
+      }
+    } catch (error) {
+      console.error('Health check failed:', error);
+      this.alertOnError(error);
+    }
+  }
+  
+  private alertOnUnhealthyStatus(health: any) {
+    // Send alert to monitoring system
+    console.error('ALERT: System health degraded!', health);
+  }
+  
+  private alertOnError(error: any) {
+    // Send alert about failed health check
+    console.error('ALERT: Health check failed!', error);
+  }
+}
+
+// Usage
+const monitor = new HealthMonitor();
+monitor.startMonitoring(60000); // Check every 60 seconds
+
+// Stop monitoring when shutting down
+process.on('SIGINT', () => {
+  monitor.stopMonitoring();
+  process.exit();
+});
+```
+
+```typescript Dependency Health Check
+import { TonightPass } from '@tonightpass/sdk';
+
+const tonightpass = new TonightPass({
+  apiKey: process.env.TONIGHTPASS_API_KEY,
+});
+
+// Use for application startup validation
+async function validateDependencies() {
+  console.log('Validating external dependencies...');
+  
+  try {
+    const health = await tonightpass.health.getAll();
+    
+    if (health.status !== 'healthy') {
+      throw new Error(
+        `Tonight Pass API is not healthy: ${health.status}`
+      );
+    }
+    
+    console.log('✓ Tonight Pass API is healthy');
+    return true;
+  } catch (error) {
+    console.error('✗ Tonight Pass API health check failed:', error);
+    return false;
+  }
+}
+
+// Run during application startup
+const isHealthy = await validateDependencies();
+if (!isHealthy) {
+  console.error('Cannot start application: dependencies unhealthy');
+  process.exit(1);
+}
+```
+</CodeGroup>
+
+## Status Types
+
+<ResponseField name="healthy" type="string">
+  All systems are operating normally
+</ResponseField>
+
+<ResponseField name="degraded" type="string">
+  Some functionality may be impaired but core services are operational
+</ResponseField>
+
+<ResponseField name="unhealthy" type="string">
+  Critical services are not functioning properly
+</ResponseField>
+
+## Best Practices
+
+<Tip>
+  - Implement health checks as part of your application's startup routine
+  - Set up periodic health monitoring for production systems
+  - Configure alerts when services become unhealthy
+  - Use health checks in load balancers and orchestration tools
+  - Check individual services when overall health is degraded
+</Tip>
+
+<Warning>
+  Health check endpoints are typically public and don't require authentication. Avoid exposing sensitive system information in custom health implementations.
+</Warning>
+
+## Integration Examples
+
+<Accordion title="Kubernetes Liveness Probe">
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp
+spec:
+  containers:
+  - name: myapp
+    image: myapp:latest
+    livenessProbe:
+      exec:
+        command:
+        - node
+        - -e
+        - |
+          const { TonightPass } = require('@tonightpass/sdk');
+          const tp = new TonightPass();
+          tp.health.getAll()
+            .then(h => process.exit(h.status === 'healthy' ? 0 : 1))
+            .catch(() => process.exit(1));
+      initialDelaySeconds: 30
+      periodSeconds: 10
+```
+</Accordion>
+
+<Accordion title="Express.js Health Endpoint">
+```typescript
+import express from 'express';
+import { TonightPass } from '@tonightpass/sdk';
+
+const app = express();
+const tonightpass = new TonightPass();
+
+app.get('/health', async (req, res) => {
+  try {
+    const health = await tonightpass.health.getAll();
+    const statusCode = health.status === 'healthy' ? 200 : 503;
+    res.status(statusCode).json(health);
+  } catch (error) {
+    res.status(503).json({ status: 'unhealthy', error: error.message });
+  }
+});
+```
+</Accordion>

@@ -1,0 +1,389 @@
+---
+title: 'Organizations'
+description: 'Manage organizations, events, members, and billing'
+icon: 'building'
+---
+
+The Organizations module provides comprehensive methods to create and manage organizations, including events, members, customers, orders, and billing information.
+
+## Organization Management
+
+### search
+
+Search for organizations by query string.
+
+```typescript
+const results = await tonightpass.organizations.search('music venue', 10);
+console.log(`Found ${results.length} organizations`);
+```
+
+<ParamField path="query" type="string" required>
+  Search query string
+</ParamField>
+
+<ParamField path="limit" type="number">
+  Maximum number of results (default: 10)
+</ParamField>
+
+**Returns:** `Promise<Organization[]>`
+
+---
+
+### getAll
+
+Get all organizations the authenticated user has access to.
+
+```typescript
+const myOrganizations = await tonightpass.organizations.getAll();
+```
+
+**Returns:** `Promise<Organization[]>`
+
+---
+
+### get
+
+Get a specific organization by slug.
+
+```typescript
+const org = await tonightpass.organizations.get('my-organization');
+console.log('Organization:', org.name);
+```
+
+<ParamField path="organizationSlug" type="string" required>
+  The organization's unique slug identifier
+</ParamField>
+
+**Returns:** `Promise<Organization>`
+
+---
+
+### create
+
+Create a new organization.
+
+```typescript
+const newOrg = await tonightpass.organizations.create({
+  name: 'My Event Venue',
+  slug: 'my-event-venue',
+  description: 'Premier event space in the city',
+  email: 'contact@myeventvenue.com',
+});
+```
+
+<ParamField path="data" type="CreateOrganizationDto" required>
+  <Expandable title="CreateOrganizationDto properties">
+    <ParamField path="name" type="string" required>
+      Organization name
+    </ParamField>
+    <ParamField path="slug" type="string" required>
+      Unique URL-friendly identifier
+    </ParamField>
+    <ParamField path="description" type="string">
+      Organization description
+    </ParamField>
+    <ParamField path="email" type="string">
+      Contact email
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+**Returns:** `Promise<Organization>`
+
+---
+
+### update
+
+Update an existing organization.
+
+```typescript
+const updated = await tonightpass.organizations.update('my-organization', {
+  name: 'Updated Organization Name',
+  description: 'New description',
+});
+```
+
+<ParamField path="organizationSlug" type="string" required>
+  The organization's slug identifier
+</ParamField>
+
+<ParamField path="data" type="UpdateOrganizationDto" required>
+  The data to update
+</ParamField>
+
+**Returns:** `Promise<Organization>`
+
+---
+
+### delete
+
+Delete an organization.
+
+```typescript
+await tonightpass.organizations.delete('my-organization');
+```
+
+<ParamField path="organizationSlug" type="string" required>
+  The organization's slug identifier
+</ParamField>
+
+**Returns:** `Promise<void>`
+
+<Warning>
+  Deleting an organization is permanent and will also delete all associated events, tickets, and data.
+</Warning>
+
+---
+
+### uploadFile
+
+Upload a file for an organization (logo, banner, etc.).
+
+```typescript
+const file = new File([blob], 'logo.png', { type: 'image/png' });
+
+await tonightpass.organizations.uploadFile(
+  'my-organization',
+  'logo',
+  file
+);
+```
+
+<ParamField path="organizationSlug" type="string" required>
+  The organization's slug identifier
+</ParamField>
+
+<ParamField path="organizationFileType" type="OrganizationFileType" required>
+  Type of file (e.g., 'logo', 'banner', 'background')
+</ParamField>
+
+<ParamField path="file" type="File | FileObject" required>
+  The file to upload
+</ParamField>
+
+**Returns:** `Promise<FileUploadResponse>`
+
+## Nested Modules
+
+The Organizations module includes several nested modules for managing related resources:
+
+### events
+
+Manage organization events. See dedicated documentation for full details.
+
+```typescript
+// Get all events for an organization
+const events = await tonightpass.organizations.events.getAll(
+  'my-organization'
+);
+
+// Create a new event
+const event = await tonightpass.organizations.events.create(
+  'my-organization',
+  {
+    name: 'Summer Music Festival',
+    slug: 'summer-music-festival',
+    startDate: '2026-07-15',
+    // ... other event data
+  }
+);
+```
+
+### members
+
+Manage organization members and invitations.
+
+```typescript
+// Get organization members
+const members = await tonightpass.organizations.members.get(
+  'my-organization'
+);
+
+// Add a member
+await tonightpass.organizations.members.create('my-organization', {
+  username: 'johndoe',
+  role: 'admin',
+});
+
+// Send invitation
+await tonightpass.organizations.members.invitations.create(
+  'my-organization',
+  { email: 'newmember@example.com' }
+);
+```
+
+### customers
+
+Manage organization customers.
+
+```typescript
+// Get all customers
+const customers = await tonightpass.organizations.customers.getAll(
+  'my-organization'
+);
+```
+
+### orders
+
+View orders for organization events.
+
+```typescript
+// Get all orders
+const orders = await tonightpass.organizations.orders.getAll(
+  'my-organization'
+);
+```
+
+### billing
+
+Manage billing and payment information.
+
+```typescript
+// Get billing info
+const billing = await tonightpass.organizations.billing.get(
+  'my-organization'
+);
+```
+
+## Usage Examples
+
+<CodeGroup>
+```typescript Create Organization
+import { TonightPass } from '@tonightpass/sdk';
+
+const tonightpass = new TonightPass({
+  apiKey: process.env.TONIGHTPASS_API_KEY,
+});
+
+// Create a new organization
+const organization = await tonightpass.organizations.create({
+  name: 'Downtown Music Hall',
+  slug: 'downtown-music-hall',
+  description: 'Live music venue in the heart of downtown',
+  email: 'info@downtownmusichall.com',
+  website: 'https://downtownmusichall.com',
+});
+
+console.log('Created organization:', organization.id);
+
+// Upload organization logo
+const logoFile = new File([logoBlob], 'logo.png', { 
+  type: 'image/png' 
+});
+
+await tonightpass.organizations.uploadFile(
+  organization.slug,
+  'logo',
+  logoFile
+);
+```
+
+```typescript Manage Members
+import { TonightPass } from '@tonightpass/sdk';
+
+const tonightpass = new TonightPass({
+  apiKey: process.env.TONIGHTPASS_API_KEY,
+});
+
+const orgSlug = 'my-organization';
+
+// Get current members
+const members = await tonightpass.organizations.members.get(orgSlug);
+console.log(`Organization has ${members.length} members`);
+
+// Add a new member
+await tonightpass.organizations.members.create(orgSlug, {
+  username: 'alice',
+  role: 'member',
+});
+
+// Invite someone to join
+await tonightpass.organizations.members.invitations.create(orgSlug, {
+  email: 'bob@example.com',
+  role: 'admin',
+});
+
+// Accept invitation (from invitee's perspective)
+await tonightpass.organizations.members.accept(orgSlug);
+```
+
+```typescript Create Event
+import { TonightPass } from '@tonightpass/sdk';
+
+const tonightpass = new TonightPass({
+  apiKey: process.env.TONIGHTPASS_API_KEY,
+});
+
+// Create an event for an organization
+const event = await tonightpass.organizations.events.create(
+  'my-organization',
+  {
+    name: 'Jazz Night',
+    slug: 'jazz-night-2026',
+    description: 'An evening of smooth jazz',
+    startDate: '2026-08-20T19:00:00Z',
+    endDate: '2026-08-20T23:00:00Z',
+    location: {
+      address: '123 Main St',
+      city: 'New York',
+      state: 'NY',
+      country: 'US',
+    },
+    capacity: 200,
+  }
+);
+
+console.log('Event created:', event.id);
+
+// Create tickets for the event
+await tonightpass.organizations.events.tickets.create(
+  'my-organization',
+  event.slug,
+  {
+    name: 'General Admission',
+    price: 50,
+    currency: 'USD',
+    quantity: 150,
+  }
+);
+```
+</CodeGroup>
+
+## Organization Structure
+
+```typescript
+interface Organization {
+  id: string;
+  slug: string;
+  name: string;
+  description?: string;
+  email?: string;
+  website?: string;
+  logo?: string;
+  banner?: string;
+  createdAt: string;
+  updatedAt: string;
+  members?: OrganizationMember[];
+  // ... additional fields
+}
+```
+
+## Best Practices
+
+<Tip>
+  - Use descriptive, URL-friendly slugs for organizations
+  - Upload high-quality logos and banners for better branding
+  - Set up proper member roles and permissions
+  - Keep organization information up to date
+  - Use organization-scoped channels for team communication
+</Tip>
+
+<Note>
+  Organization slugs must be unique across the platform. Choose them carefully as they appear in URLs and cannot be easily changed.
+</Note>
+
+## Related Modules
+
+- [Channels](/modules/channels) - Create organization-specific communication channels
+- [Users](/modules/users) - Manage user profiles and memberships
+- [Orders](/modules/orders) - View customer orders for your events

@@ -1,0 +1,366 @@
+---
+title: 'Roadmap'
+description: 'View and interact with product roadmap features'
+icon: 'map'
+---
+
+The Roadmap module allows users to view planned features and provide feedback through reactions.
+
+## Available Methods
+
+### reactions.get
+
+Get reactions for a specific roadmap feature.
+
+```typescript
+const reactions = await tonightpass.roadmap.reactions.get(featureId);
+
+console.log('Reactions:', reactions);
+```
+
+<ParamField path="featureId" type="string" required>
+  The unique identifier of the roadmap feature
+</ParamField>
+
+**Returns:** `Promise<RoadmapReactions>` - Object containing reaction counts and details
+
+---
+
+### reactions.add
+
+Add a reaction to a roadmap feature.
+
+```typescript
+await tonightpass.roadmap.reactions.add(featureId, 'upvote');
+console.log('Reaction added successfully');
+```
+
+<ParamField path="featureId" type="string" required>
+  The unique identifier of the roadmap feature
+</ParamField>
+
+<ParamField path="reaction" type="RoadmapReaction" required>
+  The type of reaction to add
+</ParamField>
+
+**Returns:** `Promise<void>`
+
+## Reaction Types
+
+The `RoadmapReaction` type supports various reaction types:
+
+```typescript
+type RoadmapReaction = 
+  | 'upvote'
+  | 'love'
+  | 'celebrate'
+  | 'interested'
+  | 'want';
+```
+
+<CardGroup cols={2}>
+  <Card title="upvote" icon="thumbs-up">
+    Support for the feature
+  </Card>
+  <Card title="love" icon="heart">
+    Enthusiasm for the feature
+  </Card>
+  <Card title="celebrate" icon="party-horn">
+    Excitement about the feature
+  </Card>
+  <Card title="interested" icon="star">
+    Interest in the feature
+  </Card>
+  <Card title="want" icon="fire">
+    Strong desire for the feature
+  </Card>
+</CardGroup>
+
+## Usage Examples
+
+<CodeGroup>
+```typescript View Reactions
+import { TonightPass } from '@tonightpass/sdk';
+
+const tonightpass = new TonightPass({
+  apiKey: process.env.TONIGHTPASS_API_KEY,
+});
+
+const featureId = 'feature_123';
+
+// Get current reactions
+const reactions = await tonightpass.roadmap.reactions.get(featureId);
+
+console.log('Reaction Summary:');
+console.log(`Upvotes: ${reactions.upvote || 0}`);
+console.log(`Love: ${reactions.love || 0}`);
+console.log(`Celebrate: ${reactions.celebrate || 0}`);
+console.log(`Interested: ${reactions.interested || 0}`);
+console.log(`Want: ${reactions.want || 0}`);
+
+const totalReactions = Object.values(reactions).reduce(
+  (sum: number, count: number) => sum + count, 
+  0
+);
+
+console.log(`\nTotal reactions: ${totalReactions}`);
+```
+
+```typescript Add Reaction
+import { TonightPass } from '@tonightpass/sdk';
+
+const tonightpass = new TonightPass({
+  apiKey: process.env.TONIGHTPASS_API_KEY,
+});
+
+const featureId = 'feature_123';
+
+// User wants to upvote a feature
+try {
+  await tonightpass.roadmap.reactions.add(featureId, 'upvote');
+  console.log('Successfully upvoted the feature!');
+} catch (error) {
+  console.error('Failed to add reaction:', error);
+}
+
+// User loves the feature
+await tonightpass.roadmap.reactions.add(featureId, 'love');
+console.log('Reaction added!');
+```
+
+```typescript React Component
+import { useState, useEffect } from 'react';
+import { TonightPass, RoadmapReaction } from '@tonightpass/sdk';
+
+const tonightpass = new TonightPass({
+  apiKey: process.env.NEXT_PUBLIC_TONIGHTPASS_API_KEY,
+});
+
+interface RoadmapFeatureProps {
+  featureId: string;
+  title: string;
+  description: string;
+}
+
+export function RoadmapFeature({ 
+  featureId, 
+  title, 
+  description 
+}: RoadmapFeatureProps) {
+  const [reactions, setReactions] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  
+  useEffect(() => {
+    loadReactions();
+  }, [featureId]);
+  
+  const loadReactions = async () => {
+    const data = await tonightpass.roadmap.reactions.get(featureId);
+    setReactions(data);
+  };
+  
+  const handleReaction = async (reaction: RoadmapReaction) => {
+    setLoading(true);
+    try {
+      await tonightpass.roadmap.reactions.add(featureId, reaction);
+      await loadReactions(); // Refresh counts
+    } catch (error) {
+      console.error('Failed to add reaction:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  return (
+    <div className="roadmap-feature">
+      <h3>{title}</h3>
+      <p>{description}</p>
+      
+      {reactions && (
+        <div className="reactions">
+          <button 
+            onClick={() => handleReaction('upvote')}
+            disabled={loading}
+          >
+            👍 {reactions.upvote || 0}
+          </button>
+          <button 
+            onClick={() => handleReaction('love')}
+            disabled={loading}
+          >
+            ❤️ {reactions.love || 0}
+          </button>
+          <button 
+            onClick={() => handleReaction('celebrate')}
+            disabled={loading}
+          >
+            🎉 {reactions.celebrate || 0}
+          </button>
+          <button 
+            onClick={() => handleReaction('interested')}
+            disabled={loading}
+          >
+            ⭐ {reactions.interested || 0}
+          </button>
+          <button 
+            onClick={() => handleReaction('want')}
+            disabled={loading}
+          >
+            🔥 {reactions.want || 0}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+```typescript Roadmap Board
+import { TonightPass } from '@tonightpass/sdk';
+
+const tonightpass = new TonightPass({
+  apiKey: process.env.TONIGHTPASS_API_KEY,
+});
+
+interface RoadmapFeature {
+  id: string;
+  title: string;
+  description: string;
+  status: 'planned' | 'in-progress' | 'completed';
+}
+
+class RoadmapManager {
+  async getFeatureWithReactions(feature: RoadmapFeature) {
+    const reactions = await tonightpass.roadmap.reactions.get(feature.id);
+    
+    const totalReactions = Object.values(reactions).reduce(
+      (sum: number, count: number) => sum + count,
+      0
+    );
+    
+    return {
+      ...feature,
+      reactions,
+      totalReactions,
+    };
+  }
+  
+  async getTopFeatures(features: RoadmapFeature[], limit: number = 10) {
+    // Get reactions for all features
+    const featuresWithReactions = await Promise.all(
+      features.map(f => this.getFeatureWithReactions(f))
+    );
+    
+    // Sort by total reactions
+    return featuresWithReactions
+      .sort((a, b) => b.totalReactions - a.totalReactions)
+      .slice(0, limit);
+  }
+  
+  async getMostWantedFeatures(features: RoadmapFeature[]) {
+    const featuresWithReactions = await Promise.all(
+      features.map(f => this.getFeatureWithReactions(f))
+    );
+    
+    // Sort by 'want' reactions
+    return featuresWithReactions
+      .sort((a, b) => {
+        const aWants = a.reactions.want || 0;
+        const bWants = b.reactions.want || 0;
+        return bWants - aWants;
+      })
+      .filter(f => (f.reactions.want || 0) > 0);
+  }
+}
+
+// Usage
+const manager = new RoadmapManager();
+
+const features: RoadmapFeature[] = [
+  {
+    id: 'feature_1',
+    title: 'Dark Mode',
+    description: 'Add dark mode support',
+    status: 'planned',
+  },
+  // ... more features
+];
+
+const topFeatures = await manager.getTopFeatures(features, 5);
+console.log('Top 5 most popular features:');
+topFeatures.forEach((f, i) => {
+  console.log(`${i + 1}. ${f.title} (${f.totalReactions} reactions)`);
+});
+
+const mostWanted = await manager.getMostWantedFeatures(features);
+console.log('\nMost wanted features:');
+mostWanted.forEach(f => {
+  console.log(`- ${f.title} (${f.reactions.want} wants)`);
+});
+```
+</CodeGroup>
+
+## Best Practices
+
+<Tip>
+  - Display reaction counts prominently to show feature popularity
+  - Allow users to react with multiple types for nuanced feedback
+  - Update reaction counts in real-time or after user interaction
+  - Use reactions to prioritize feature development
+  - Consider limiting one reaction type per user per feature
+</Tip>
+
+<Note>
+  Roadmap reactions help the Tonight Pass team understand which features are most desired by the community. Encourage your users to provide feedback on upcoming features.
+</Note>
+
+## UI Implementation Tips
+
+<Accordion title="Emoji Mapping">
+```typescript
+const REACTION_EMOJIS = {
+  upvote: '👍',
+  love: '❤️',
+  celebrate: '🎉',
+  interested: '⭐',
+  want: '🔥',
+};
+
+function getReactionEmoji(reaction: RoadmapReaction): string {
+  return REACTION_EMOJIS[reaction];
+}
+```
+</Accordion>
+
+<Accordion title="Reaction Button Component">
+```typescript
+interface ReactionButtonProps {
+  reaction: RoadmapReaction;
+  count: number;
+  onClick: () => void;
+  active?: boolean;
+}
+
+function ReactionButton({ 
+  reaction, 
+  count, 
+  onClick, 
+  active 
+}: ReactionButtonProps) {
+  return (
+    <button
+      onClick={onClick}
+      className={`reaction-btn ${active ? 'active' : ''}`}
+    >
+      <span className="emoji">{getReactionEmoji(reaction)}</span>
+      <span className="count">{count}</span>
+    </button>
+  );
+}
+```
+</Accordion>
+
+## Related Resources
+
+- [Notifications](/modules/notifications) - Subscribe to updates about roadmap features
+- [Profiles](/modules/profiles) - View which users reacted to features

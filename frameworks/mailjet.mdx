@@ -1,0 +1,484 @@
+---
+title: Mailjet
+description: NestJS module for integrating Mailjet email service
+---
+
+The `@tonightpass/nestjs-mailjet` package provides a complete NestJS module for sending emails through Mailjet, with support for templates, contact management, and list subscriptions.
+
+## Installation
+
+Install the package along with its peer dependencies:
+
+<CodeGroup>
+```bash npm
+npm install @tonightpass/nestjs-mailjet @nestjs/common @nestjs/core @nestjs/axios node-mailjet
+```
+
+```bash yarn
+yarn add @tonightpass/nestjs-mailjet @nestjs/common @nestjs/core @nestjs/axios node-mailjet
+```
+
+```bash pnpm
+pnpm add @tonightpass/nestjs-mailjet @nestjs/common @nestjs/core @nestjs/axios node-mailjet
+```
+</CodeGroup>
+
+<Note>
+This package requires Node.js 14.0.0 or higher and NestJS 8.x.x or higher.
+</Note>
+
+## Module Setup
+
+The MailjetModule can be configured using either synchronous or asynchronous registration.
+
+### Synchronous Configuration
+
+Register the module with static configuration:
+
+```typescript
+import { Module } from '@nestjs/common';
+import { MailjetModule } from '@tonightpass/nestjs-mailjet';
+
+@Module({
+  imports: [
+    MailjetModule.forRoot({
+      apiKey: 'your_mailjet_api_key',
+      apiSecret: 'your_mailjet_api_secret',
+      sandboxMode: false
+    })
+  ]
+})
+export class AppModule {}
+```
+
+### Asynchronous Configuration
+
+Register the module with async configuration using ConfigService:
+
+```typescript
+import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { MailjetModule } from '@tonightpass/nestjs-mailjet';
+
+@Module({
+  imports: [
+    ConfigModule.forRoot(),
+    MailjetModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        apiKey: configService.get<string>('MAILJET_API_KEY'),
+        apiSecret: configService.get<string>('MAILJET_API_SECRET'),
+        sandboxMode: configService.get<boolean>('MAILJET_SANDBOX_MODE', false)
+      })
+    })
+  ]
+})
+export class AppModule {}
+```
+
+### Configuration with useClass
+
+Create a configuration factory class:
+
+```typescript
+import { Injectable } from '@nestjs/common';
+import { 
+  MailjetOptionsFactory, 
+  MailjetModuleOptions 
+} from '@tonightpass/nestjs-mailjet';
+
+@Injectable()
+export class MailjetConfigService implements MailjetOptionsFactory {
+  createMailjetOptions(): MailjetModuleOptions {
+    return {
+      apiKey: process.env.MAILJET_API_KEY!,
+      apiSecret: process.env.MAILJET_API_SECRET!,
+      sandboxMode: process.env.NODE_ENV !== 'production'
+    };
+  }
+}
+
+@Module({
+  imports: [
+    MailjetModule.forRootAsync({
+      useClass: MailjetConfigService
+    })
+  ]
+})
+export class AppModule {}
+```
+
+## Configuration Options
+
+<ParamField path="apiKey" type="string" required>
+  Public Mailjet API key from your account settings
+</ParamField>
+
+<ParamField path="apiSecret" type="string" required>
+  Private Mailjet API secret from your account settings
+</ParamField>
+
+<ParamField path="sandboxMode" type="boolean" default="false">
+  When true, emails are validated but not sent. Useful for testing without affecting email deliverability.
+</ParamField>
+
+## MailjetService
+
+The `MailjetService` provides methods for sending emails and managing contacts.
+
+### Sending Emails
+
+Inject the service and send emails with full type safety:
+
+```typescript
+import { Injectable } from '@nestjs/common';
+import { MailjetService } from '@tonightpass/nestjs-mailjet';
+
+@Injectable()
+export class EmailService {
+  constructor(private readonly mailjetService: MailjetService) {}
+
+  async sendWelcomeEmail(to: string, name: string) {
+    const result = await this.mailjetService.sendEmail({
+      Messages: [
+        {
+          From: {
+            Email: 'noreply@example.com',
+            Name: 'Your App'
+          },
+          To: [
+            {
+              Email: to,
+              Name: name
+            }
+          ],
+          Subject: 'Welcome to our platform!',
+          TextPart: `Welcome ${name}! Thanks for signing up.`,
+          HTMLPart: `<h1>Welcome ${name}!</h1><p>Thanks for signing up.</p>`
+        }
+      ]
+    });
+
+    return result;
+  }
+}
+```
+
+### Email Templates
+
+Send emails using Mailjet templates with variables:
+
+```typescript
+async sendTemplateEmail(to: string, templateId: number, variables: Record<string, any>) {
+  return await this.mailjetService.sendEmail({
+    Messages: [
+      {
+        From: {
+          Email: 'noreply@example.com',
+          Name: 'Your App'
+        },
+        To: [
+          {
+            Email: to
+          }
+        ],
+        TemplateID: templateId,
+        TemplateLanguage: true,
+        Variables: variables
+      }
+    ]
+  });
+}
+```
+
+### Using Template Variables
+
+Pass dynamic data to your templates:
+
+```typescript
+async sendPasswordReset(email: string, resetToken: string) {
+  return await this.mailjetService.sendEmail<{
+    username: string;
+    reset_url: string;
+  }>({
+    Messages: [
+      {
+        From: {
+          Email: 'noreply@example.com',
+          Name: 'Your App'
+        },
+        To: [{ Email: email }],
+        TemplateID: 1234567,
+        TemplateLanguage: true,
+        Variables: {
+          username: email.split('@')[0],
+          reset_url: `https://example.com/reset?token=${resetToken}`
+        }
+      }
+    ]
+  });
+}
+```
+
+## Contact Management
+
+Manage Mailjet contacts and mailing lists:
+
+### Find Contact
+
+Retrieve a contact by ID or email:
+
+```typescript
+async getContactDetails(contactId: string) {
+  try {
+    const contact = await this.mailjetService.findContact(contactId);
+    return contact;
+  } catch (error) {
+    // Contact not found
+    return null;
+  }
+}
+```
+
+### Add Contact
+
+Create a new contact in Mailjet:
+
+```typescript
+async createContact(email: string, name: string) {
+  const contact = await this.mailjetService.addContact({
+    Email: email,
+    Name: name,
+    IsExcludedFromCampaigns: false
+  });
+
+  return contact;
+}
+```
+
+### Subscribe to List
+
+Add a contact to a mailing list:
+
+```typescript
+async subscribeToNewsletter(email: string, listId: number) {
+  // First, find or create the contact
+  let contact;
+  try {
+    contact = await this.mailjetService.findContact(email);
+  } catch {
+    contact = await this.mailjetService.addContact({
+      Email: email
+    });
+  }
+
+  // Subscribe to the list
+  await this.mailjetService.subscribeContactToList(contact.ID, listId);
+
+  return { success: true };
+}
+```
+
+### Unsubscribe from List
+
+Remove a contact from a mailing list:
+
+```typescript
+async unsubscribeFromNewsletter(email: string, listId: number) {
+  const contact = await this.mailjetService.findContact(email);
+  
+  await this.mailjetService.unsubscribeContactFromList(contact.ID, listId);
+  
+  return { success: true };
+}
+```
+
+## Complete Service Example
+
+Here's a complete example of an email service:
+
+```typescript
+import { Injectable, Logger } from '@nestjs/common';
+import { MailjetService } from '@tonightpass/nestjs-mailjet';
+
+@Injectable()
+export class NotificationService {
+  private readonly logger = new Logger(NotificationService.name);
+
+  constructor(private readonly mailjetService: MailjetService) {}
+
+  async sendVerificationEmail(email: string, token: string) {
+    try {
+      const result = await this.mailjetService.sendEmail({
+        Messages: [
+          {
+            From: {
+              Email: 'noreply@example.com',
+              Name: 'Example App'
+            },
+            To: [{ Email: email }],
+            Subject: 'Verify your email',
+            TemplateID: 1234567,
+            TemplateLanguage: true,
+            Variables: {
+              verification_url: `https://example.com/verify?token=${token}`
+            }
+          }
+        ]
+      });
+
+      this.logger.log(`Verification email sent to ${email}`);
+      return result;
+    } catch (error) {
+      this.logger.error(`Failed to send verification email: ${error.message}`);
+      throw error;
+    }
+  }
+
+  async sendBulkEmail(recipients: string[], subject: string, content: string) {
+    const messages = recipients.map(email => ({
+      From: {
+        Email: 'noreply@example.com',
+        Name: 'Example App'
+      },
+      To: [{ Email: email }],
+      Subject: subject,
+      HTMLPart: content
+    }));
+
+    // Mailjet supports up to 50 messages per API call
+    const result = await this.mailjetService.sendEmail({
+      Messages: messages
+    });
+
+    return result;
+  }
+
+  async manageNewsletterSubscription(
+    email: string, 
+    subscribe: boolean, 
+    listId: number
+  ) {
+    let contact;
+
+    try {
+      contact = await this.mailjetService.findContact(email);
+    } catch {
+      if (subscribe) {
+        contact = await this.mailjetService.addContact({ Email: email });
+      } else {
+        throw new Error('Contact not found');
+      }
+    }
+
+    if (subscribe) {
+      await this.mailjetService.subscribeContactToList(contact.ID, listId);
+    } else {
+      await this.mailjetService.unsubscribeContactFromList(contact.ID, listId);
+    }
+
+    return { success: true, subscribed: subscribe };
+  }
+}
+```
+
+## Error Handling
+
+The service throws errors when operations fail. Implement proper error handling:
+
+```typescript
+import { HttpException, HttpStatus } from '@nestjs/common';
+
+async sendEmailSafely(to: string, subject: string, content: string) {
+  try {
+    return await this.mailjetService.sendEmail({
+      Messages: [{
+        From: { Email: 'noreply@example.com', Name: 'App' },
+        To: [{ Email: to }],
+        Subject: subject,
+        HTMLPart: content
+      }]
+    });
+  } catch (error) {
+    if (error.message.includes('not sent')) {
+      throw new HttpException(
+        'Failed to send email',
+        HttpStatus.SERVICE_UNAVAILABLE
+      );
+    }
+    throw error;
+  }
+}
+```
+
+## Sandbox Mode
+
+Use sandbox mode for testing without sending actual emails:
+
+```typescript
+// In development
+MailjetModule.forRoot({
+  apiKey: process.env.MAILJET_API_KEY,
+  apiSecret: process.env.MAILJET_API_SECRET,
+  sandboxMode: true  // Validates but doesn't send
+})
+```
+
+In sandbox mode:
+- All email validation is performed
+- No emails are actually sent
+- API returns success responses without Message ID
+- Useful for development and testing
+
+## Environment Variables
+
+Store your credentials securely:
+
+```env
+MAILJET_API_KEY=your_public_api_key
+MAILJET_API_SECRET=your_secret_api_key
+MAILJET_SANDBOX_MODE=true
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Use Templates" icon="file-code">
+    Create reusable email templates in Mailjet dashboard for consistent branding and easier maintenance.
+  </Card>
+  
+  <Card title="Sandbox Testing" icon="flask">
+    Always test with sandbox mode enabled in development to avoid sending test emails to real users.
+  </Card>
+  
+  <Card title="Error Handling" icon="shield-check">
+    Implement comprehensive error handling and logging for email delivery failures.
+  </Card>
+  
+  <Card title="Rate Limiting" icon="gauge-high">
+    Be aware of Mailjet's rate limits and implement queuing for bulk email operations.
+  </Card>
+</CardGroup>
+
+## TypeScript Support
+
+The package provides full TypeScript support:
+
+```typescript
+import type { 
+  MailjetModuleOptions,
+  MailjetOptionsFactory 
+} from '@tonightpass/nestjs-mailjet';
+import type { 
+  SendEmailV3_1,
+  Contact 
+} from 'node-mailjet';
+
+// All types are fully typed
+const options: MailjetModuleOptions = {
+  apiKey: 'key',
+  apiSecret: 'secret',
+  sandboxMode: false
+};
+```

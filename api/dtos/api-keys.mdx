@@ -1,0 +1,70 @@
+---
+title: 'API Keys DTOs'
+description: 'Data Transfer Objects for API key management'
+---
+
+## Overview
+
+API Keys DTOs are used to create and update API keys in the Tonight Pass SDK. These simple type definitions provide a streamlined interface for managing API keys.
+
+---
+
+## CreateApiKeyDto
+
+Used to create a new API key.
+
+### Type Definition
+
+```typescript
+export type CreateApiKeyDto = {
+  name: string;
+};
+```
+
+### Properties
+
+<ParamField path="name" type="string" required>
+  The name of the API key. Used to identify the key in the dashboard and API responses.
+</ParamField>
+
+### Example
+
+```typescript
+const createDto: CreateApiKeyDto = {
+  name: "Production API Key"
+};
+```
+
+---
+
+## UpdateApiKeyDto
+
+Used to update an existing API key.
+
+### Type Definition
+
+```typescript
+export type UpdateApiKeyDto = {
+  name?: string;
+  isActive?: boolean;
+};
+```
+
+### Properties
+
+<ParamField path="name" type="string">
+  The new name for the API key.
+</ParamField>
+
+<ParamField path="isActive" type="boolean">
+  Whether the API key is active. Set to `false` to disable the key without deleting it.
+</ParamField>
+
+### Example
+
+```typescript
+const updateDto: UpdateApiKeyDto = {
+  name: "Updated Production Key",
+  isActive: false
+};
+```

@@ -1,0 +1,197 @@
+---
+title: 'Currencies'
+description: 'Get currency exchange rates and convert between currencies'
+icon: 'money-bill-wave'
+---
+
+The Currencies module provides methods to retrieve exchange rates and convert amounts between different currencies.
+
+## Available Methods
+
+### getRates
+
+Retrieve current exchange rates for all supported currencies.
+
+```typescript
+const rates = await tonightpass.currencies.getRates();
+console.log(rates);
+```
+
+**Returns:** `Promise<CurrencyRates>` - An object containing exchange rates for all supported currencies
+
+<Note>
+  Exchange rates are updated regularly and reflect current market rates.
+</Note>
+
+---
+
+### convert
+
+Convert an amount from one currency to another.
+
+```typescript
+const result = await tonightpass.currencies.convert({
+  from: 'USD',
+  to: 'EUR',
+  amount: 100,
+});
+
+console.log(result); // { converted: 92.50, rate: 0.925 }
+```
+
+<ParamField path="conversion" type="CurrencyConversion" required>
+  <Expandable title="CurrencyConversion properties">
+    <ParamField path="from" type="Currency" required>
+      The source currency code (e.g., 'USD', 'EUR', 'GBP')
+    </ParamField>
+    <ParamField path="to" type="Currency" required>
+      The target currency code
+    </ParamField>
+    <ParamField path="amount" type="number" required>
+      The amount to convert
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+**Returns:** `Promise<ConversionResult>` - The converted amount and exchange rate
+
+---
+
+### convertAmount
+
+Convenience method to convert an amount with separate parameters.
+
+```typescript
+const result = await tonightpass.currencies.convertAmount('USD', 'EUR', 100);
+console.log(result);
+```
+
+<ParamField path="from" type="Currency" required>
+  The source currency code
+</ParamField>
+
+<ParamField path="to" type="Currency" required>
+  The target currency code
+</ParamField>
+
+<ParamField path="amount" type="number" required>
+  The amount to convert
+</ParamField>
+
+**Returns:** `Promise<ConversionResult>` - The converted amount and exchange rate
+
+## Supported Currencies
+
+The following currency codes are commonly supported:
+
+<CardGroup cols={3}>
+  <Card title="USD" icon="dollar-sign">
+    US Dollar
+  </Card>
+  <Card title="EUR" icon="euro-sign">
+    Euro
+  </Card>
+  <Card title="GBP" icon="sterling-sign">
+    British Pound
+  </Card>
+  <Card title="JPY" icon="yen-sign">
+    Japanese Yen
+  </Card>
+  <Card title="CAD" icon="dollar-sign">
+    Canadian Dollar
+  </Card>
+  <Card title="AUD" icon="dollar-sign">
+    Australian Dollar
+  </Card>
+</CardGroup>
+
+<Note>
+  For a complete list of supported currencies, call the `getRates()` method.
+</Note>
+
+## Usage Examples
+
+<CodeGroup>
+```typescript Get Exchange Rates
+import { TonightPass } from '@tonightpass/sdk';
+
+const tonightpass = new TonightPass({
+  apiKey: process.env.TONIGHTPASS_API_KEY,
+});
+
+// Get all current exchange rates
+const rates = await tonightpass.currencies.getRates();
+
+console.log('Exchange Rates:');
+for (const [currency, rate] of Object.entries(rates)) {
+  console.log(`${currency}: ${rate}`);
+}
+```
+
+```typescript Currency Conversion
+import { TonightPass } from '@tonightpass/sdk';
+
+const tonightpass = new TonightPass({
+  apiKey: process.env.TONIGHTPASS_API_KEY,
+});
+
+// Convert using object syntax
+const result1 = await tonightpass.currencies.convert({
+  from: 'USD',
+  to: 'EUR',
+  amount: 100,
+});
+
+console.log(`100 USD = ${result1.converted} EUR`);
+console.log(`Exchange rate: ${result1.rate}`);
+
+// Convert using shorthand method
+const result2 = await tonightpass.currencies.convertAmount('GBP', 'USD', 50);
+console.log(`50 GBP = ${result2.converted} USD`);
+```
+
+```typescript Price Display
+import { TonightPass } from '@tonightpass/sdk';
+
+const tonightpass = new TonightPass({
+  apiKey: process.env.TONIGHTPASS_API_KEY,
+});
+
+interface Product {
+  name: string;
+  price: number;
+  currency: string;
+}
+
+const product: Product = {
+  name: 'Event Ticket',
+  price: 50,
+  currency: 'USD',
+};
+
+// Display price in user's preferred currency
+const userCurrency = 'EUR';
+
+const converted = await tonightpass.currencies.convertAmount(
+  product.currency,
+  userCurrency,
+  product.price
+);
+
+console.log(`${product.name}: ${converted.converted} ${userCurrency}`);
+console.log(`(Original: ${product.price} ${product.currency})`);
+```
+</CodeGroup>
+
+## Best Practices
+
+<Warning>
+  - Cache exchange rates when possible to reduce API calls
+  - Display original currency alongside converted amounts for transparency
+  - Handle conversion errors gracefully (e.g., unsupported currencies)
+  - Consider rounding converted amounts appropriately for display
+</Warning>
+
+<Tip>
+  For high-volume currency conversions, consider caching rates locally and refreshing them periodically rather than making conversion API calls for every transaction.
+</Tip>

@@ -1,0 +1,365 @@
+---
+title: 'Profiles'
+description: 'View user profiles, search users, and manage relationships'
+icon: 'user'
+---
+
+The Profiles module provides methods to view and search user profiles, as well as manage social relationships like following and followers.
+
+## Profile Management
+
+### getAll
+
+Get all user profiles with optional filtering.
+
+```typescript
+const profiles = await tonightpass.profiles.getAll({
+  limit: 20,
+  offset: 0,
+});
+
+console.log(`Loaded ${profiles.length} profiles`);
+```
+
+<ParamField path="options" type="ArrayOptions<Profile>">
+  <Expandable title="ArrayOptions properties">
+    <ParamField path="limit" type="number">
+      Maximum number of profiles to return
+    </ParamField>
+    <ParamField path="offset" type="number">
+      Number of profiles to skip for pagination
+    </ParamField>
+    <ParamField path="orderBy" type="string">
+      Field to order results by
+    </ParamField>
+    <ParamField path="orderDirection" type="'asc' | 'desc'">
+      Sort direction
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+**Returns:** `Promise<Profile[]>`
+
+---
+
+### search
+
+Search for user profiles by query string.
+
+```typescript
+const results = await tonightpass.profiles.search('john', {
+  limit: 10,
+});
+
+results.forEach(profile => {
+  console.log(`@${profile.username} - ${profile.displayName}`);
+});
+```
+
+<ParamField path="query" type="string" required>
+  Search query string (searches username, name, bio, etc.)
+</ParamField>
+
+<ParamField path="options" type="ArrayOptions<Profile>">
+  Pagination and filtering options
+</ParamField>
+
+**Returns:** `Promise<Profile[]>`
+
+---
+
+### get
+
+Get a specific user profile by username.
+
+```typescript
+const profile = await tonightpass.profiles.get('johndoe');
+
+console.log('Profile:', profile.displayName);
+console.log('Bio:', profile.bio);
+console.log('Followers:', profile.followersCount);
+console.log('Following:', profile.followingCount);
+```
+
+<ParamField path="username" type="string" required>
+  The username of the profile to retrieve (without @ prefix)
+</ParamField>
+
+**Returns:** `Promise<Profile>`
+
+## Relationships
+
+The profiles module includes a `relationships` submodule for managing social connections.
+
+### follow
+
+Follow a user.
+
+```typescript
+await tonightpass.profiles.relationships.follow('johndoe');
+console.log('Now following @johndoe');
+```
+
+<ParamField path="username" type="string" required>
+  Username of the user to follow
+</ParamField>
+
+**Returns:** `Promise<void>`
+
+---
+
+### unfollow
+
+Unfollow a user.
+
+```typescript
+await tonightpass.profiles.relationships.unfollow('johndoe');
+console.log('Unfollowed @johndoe');
+```
+
+<ParamField path="username" type="string" required>
+  Username of the user to unfollow
+</ParamField>
+
+**Returns:** `Promise<void>`
+
+---
+
+### getSuggestions
+
+Get suggested profiles to follow.
+
+```typescript
+const suggestions = await tonightpass.profiles.relationships.getSuggestions({
+  limit: 10,
+});
+
+console.log('Suggested profiles:');
+suggestions.forEach(profile => {
+  console.log(`@${profile.username} - ${profile.displayName}`);
+});
+```
+
+<ParamField path="options" type="ArrayOptions<UserIdentity | OrganizationIdentity>" required>
+  Pagination options
+</ParamField>
+
+**Returns:** `Promise<(UserIdentity | OrganizationIdentity)[]>`
+
+---
+
+### getFollowers
+
+Get a user's followers.
+
+```typescript
+const followers = await tonightpass.profiles.relationships.getFollowers(
+  'johndoe',
+  { limit: 50 }
+);
+
+console.log(`@johndoe has ${followers.length} followers`);
+```
+
+<ParamField path="username" type="string" required>
+  Username of the user whose followers to retrieve
+</ParamField>
+
+<ParamField path="options" type="ArrayOptions<UserIdentity | OrganizationIdentity>" required>
+  Pagination options
+</ParamField>
+
+**Returns:** `Promise<(UserIdentity | OrganizationIdentity)[]>`
+
+## Profile Object
+
+```typescript
+interface Profile {
+  id: string;
+  username: string;
+  displayName: string;
+  bio?: string;
+  avatar?: string;
+  banner?: string;
+  website?: string;
+  location?: string;
+  followersCount: number;
+  followingCount: number;
+  postsCount: number;
+  verified: boolean;
+  createdAt: string;
+  // ... additional fields
+}
+```
+
+## Usage Examples
+
+<CodeGroup>
+```typescript Search Profiles
+import { TonightPass } from '@tonightpass/sdk';
+
+const tonightpass = new TonightPass({
+  apiKey: process.env.TONIGHTPASS_API_KEY,
+});
+
+// Search for profiles
+const query = 'music';
+const results = await tonightpass.profiles.search(query, { limit: 20 });
+
+console.log(`Found ${results.length} profiles matching "${query}"`);
+
+results.forEach(profile => {
+  console.log(`\n@${profile.username}`);
+  console.log(`Name: ${profile.displayName}`);
+  if (profile.bio) {
+    console.log(`Bio: ${profile.bio}`);
+  }
+  console.log(`Followers: ${profile.followersCount}`);
+});
+```
+
+```typescript View Profile
+import { TonightPass } from '@tonightpass/sdk';
+
+const tonightpass = new TonightPass({
+  apiKey: process.env.TONIGHTPASS_API_KEY,
+});
+
+const username = 'johndoe';
+
+// Get profile details
+const profile = await tonightpass.profiles.get(username);
+
+console.log('Profile Information:');
+console.log(`Username: @${profile.username}`);
+console.log(`Display Name: ${profile.displayName}`);
+console.log(`Bio: ${profile.bio || 'No bio'}`);
+console.log(`Location: ${profile.location || 'Not specified'}`);
+console.log(`Website: ${profile.website || 'None'}`);
+console.log(`\nStats:`);
+console.log(`Followers: ${profile.followersCount}`);
+console.log(`Following: ${profile.followingCount}`);
+console.log(`Posts: ${profile.postsCount}`);
+console.log(`Verified: ${profile.verified ? 'Yes' : 'No'}`);
+
+// Get user's posts
+const posts = await tonightpass.users.posts.getByUsername(username);
+console.log(`\nRecent posts: ${posts.length}`);
+```
+
+```typescript Follow Management
+import { TonightPass } from '@tonightpass/sdk';
+
+const tonightpass = new TonightPass({
+  apiKey: process.env.TONIGHTPASS_API_KEY,
+});
+
+// Follow a user
+await tonightpass.profiles.relationships.follow('alice');
+console.log('Followed @alice');
+
+// Get follow suggestions
+const suggestions = await tonightpass.profiles.relationships.getSuggestions({
+  limit: 5,
+});
+
+console.log('\nSuggested profiles to follow:');
+suggestions.forEach(profile => {
+  console.log(`- @${profile.username}`);
+});
+
+// Get followers
+const followers = await tonightpass.profiles.relationships.getFollowers(
+  'alice',
+  { limit: 100 }
+);
+
+console.log(`\n@alice has ${followers.length} followers`);
+
+// Unfollow a user
+await tonightpass.profiles.relationships.unfollow('alice');
+console.log('Unfollowed @alice');
+```
+
+```typescript Profile Discovery
+import { TonightPass } from '@tonightpass/sdk';
+
+const tonightpass = new TonightPass({
+  apiKey: process.env.TONIGHTPASS_API_KEY,
+});
+
+class ProfileDiscovery {
+  async findPopularProfiles() {
+    const profiles = await tonightpass.profiles.getAll({
+      limit: 50,
+      orderBy: 'followersCount',
+      orderDirection: 'desc',
+    });
+    
+    return profiles.filter(p => p.followersCount > 1000);
+  }
+  
+  async findVerifiedProfiles() {
+    const profiles = await tonightpass.profiles.getAll({ limit: 100 });
+    return profiles.filter(p => p.verified);
+  }
+  
+  async findProfilesWithWebsite() {
+    const profiles = await tonightpass.profiles.getAll({ limit: 100 });
+    return profiles.filter(p => p.website);
+  }
+  
+  async searchAndFollow(query: string, maxToFollow: number = 5) {
+    const results = await tonightpass.profiles.search(query, {
+      limit: maxToFollow * 2,
+    });
+    
+    const toFollow = results.slice(0, maxToFollow);
+    
+    for (const profile of toFollow) {
+      try {
+        await tonightpass.profiles.relationships.follow(profile.username);
+        console.log(`Followed @${profile.username}`);
+      } catch (error) {
+        console.error(`Failed to follow @${profile.username}:`, error);
+      }
+    }
+    
+    return toFollow;
+  }
+}
+
+// Usage
+const discovery = new ProfileDiscovery();
+
+const popularProfiles = await discovery.findPopularProfiles();
+console.log(`Found ${popularProfiles.length} popular profiles`);
+
+const verified = await discovery.findVerifiedProfiles();
+console.log(`Found ${verified.length} verified profiles`);
+```
+</CodeGroup>
+
+## Best Practices
+
+<Tip>
+  - Cache profile data locally to reduce API calls
+  - Implement debouncing for search functionality
+  - Show loading states while fetching profiles
+  - Display profile avatars and banners for better UX
+  - Implement infinite scroll for profile lists
+</Tip>
+
+<Warning>
+  Be mindful of rate limits when implementing automated following/unfollowing. Always respect user privacy and platform guidelines.
+</Warning>
+
+<Note>
+  Profile usernames are case-insensitive but typically displayed in lowercase. The API handles case normalization automatically.
+</Note>
+
+## Related Modules
+
+- [Users](/modules/users) - Manage user account data and settings
+- [Feed](/modules/feed) - View posts from followed profiles
+- [Auth](/modules/auth) - User authentication and registration

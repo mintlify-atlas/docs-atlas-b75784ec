@@ -1,0 +1,382 @@
+---
+title: 'Authentication'
+description: 'Authenticate API requests with API keys and access tokens'
+icon: 'key'
+---
+
+The Tonight Pass SDK supports two authentication methods: API keys for server-side applications and access tokens for user-authenticated requests.
+
+## Authentication Methods
+
+<Tabs>
+  <Tab title="API Key">
+    API keys are used for server-side authentication and provide access to your organization's resources.
+
+    ```typescript
+    import { TonightPass } from '@tonightpass/node';
+
+    const tonightpass = new TonightPass({
+      baseURL: 'https://api.tonightpass.com',
+      apiKey: 'your-api-key'
+    });
+    ```
+
+    <Warning>
+      API keys should never be exposed in client-side code or version control. Always use environment variables.
+    </Warning>
+  </Tab>
+
+  <Tab title="Access Token">
+    Access tokens represent authenticated users and are obtained through the authentication flow.
+
+    ```typescript
+    import { TonightPass } from '@tonightpass/node';
+
+    const tonightpass = new TonightPass({
+      baseURL: 'https://api.tonightpass.com',
+      apiKey: 'your-api-key',
+      accessToken: 'user-access-token'
+    });
+    ```
+
+    Access tokens can also be set dynamically:
+
+    ```typescript
+    tonightpass.client.setAccessToken('user-access-token');
+    ```
+  </Tab>
+
+  <Tab title="Both">
+    You can use both authentication methods together. The API key identifies your application, while the access token represents the user.
+
+    ```typescript
+    import { TonightPass } from '@tonightpass/node';
+
+    const tonightpass = new TonightPass({
+      baseURL: 'https://api.tonightpass.com',
+      apiKey: 'your-api-key',
+      accessToken: 'user-access-token'
+    });
+    ```
+  </Tab>
+</Tabs>
+
+## How Authentication Works
+
+Authentication credentials are sent as HTTP headers with every request:
+
+```typescript
+// From packages/node/src/rest/request/request.ts
+const headers = {
+  ...requestOptions.headers,
+  ...(apiKey && { "X-API-Key": apiKey }),
+  ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
+};
+```
+
+### API Key Header
+
+```http
+X-API-Key: your-api-key
+```
+
+### Access Token Header
+
+```http
+Authorization: Bearer user-access-token
+```
+
+## ClientOptions Type
+
+The `ClientOptions` type defines authentication configuration:
+
+```typescript
+// From packages/node/src/rest/client.ts
+export type ClientOptions = {
+  readonly baseURL: string;
+  readonly apiKey?: string;
+  readonly accessToken?: string;
+  readonly cache?: CacheOptions;
+};
+```
+
+<ParamField path="apiKey" type="string">
+  Optional API key for server-side authentication
+</ParamField>
+
+<ParamField path="accessToken" type="string">
+  Optional user access token for authenticated requests
+</ParamField>
+
+## Managing Access Tokens
+
+Access tokens can be managed dynamically without recreating the client:
+
+### Set Access Token
+
+```typescript
+setAccessToken(accessToken: string | undefined): void
+```
+
+<CodeGroup>
+
+```typescript After Login
+// User successfully logs in
+const loginResponse = await tonightpass.auth.login({
+  email: 'user@example.com',
+  password: 'password123'
+});
+
+// Set the access token
+tonightpass.client.setAccessToken(loginResponse.accessToken);
+
+// Now all requests will include the user's token
+const profile = await tonightpass.users.me();
+```
+
+```typescript After Logout
+// User logs out
+await tonightpass.auth.logout();
+
+// Clear the access token
+tonightpass.client.setAccessToken(undefined);
+
+// Requests will now only use the API key
+```
+
+```typescript Token Refresh
+// Refresh expired token
+try {
+  const newToken = await tonightpass.auth.refresh(refreshToken);
+  tonightpass.client.setAccessToken(newToken.accessToken);
+} catch (error) {
+  // Token refresh failed, redirect to login
+  tonightpass.client.setAccessToken(undefined);
+}
+```
+
+</CodeGroup>
+
+## Authentication Patterns
+
+### Server-Side Application
+
+For server-side applications, use only the API key:
+
+```typescript
+import { TonightPass } from '@tonightpass/node';
+
+const tonightpass = new TonightPass({
+  baseURL: process.env.TONIGHTPASS_API_URL!,
+  apiKey: process.env.TONIGHTPASS_API_KEY!
+});
+
+// Access organization resources
+const events = await tonightpass.organizations.events.list({
+  organizationId: 'org-123'
+});
+```
+
+### User-Authenticated Application
+
+For applications with user authentication, combine both methods:
+
+```typescript
+import { TonightPass } from '@tonightpass/node';
+
+// Initialize with API key
+const tonightpass = new TonightPass({
+  baseURL: process.env.TONIGHTPASS_API_URL!,
+  apiKey: process.env.TONIGHTPASS_API_KEY!
+});
+
+// User login flow
+async function handleLogin(email: string, password: string) {
+  const response = await tonightpass.auth.login({
+    email,
+    password
+  });
+  
+  // Set the user's access token
+  tonightpass.client.setAccessToken(response.accessToken);
+  
+  // Store refresh token securely
+  await storeRefreshToken(response.refreshToken);
+  
+  return response;
+}
+
+// Now user-specific requests work
+const userProfile = await tonightpass.users.me();
+const userBookings = await tonightpass.users.bookings.list();
+```
+
+### Middleware Pattern
+
+For web applications, create middleware to manage authentication:
+
+```typescript
+import { TonightPass } from '@tonightpass/node';
+import type { Request, Response, NextFunction } from 'express';
+
+const tonightpass = new TonightPass({
+  baseURL: process.env.TONIGHTPASS_API_URL!,
+  apiKey: process.env.TONIGHTPASS_API_KEY!
+});
+
+async function authMiddleware(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  const authHeader = req.headers.authorization;
+  
+  if (authHeader?.startsWith('Bearer ')) {
+    const token = authHeader.slice(7);
+    tonightpass.client.setAccessToken(token);
+  }
+  
+  // Attach SDK to request
+  req.tonightpass = tonightpass;
+  next();
+}
+
+// Use in routes
+app.get('/api/profile', authMiddleware, async (req, res) => {
+  const profile = await req.tonightpass.users.me();
+  res.json(profile);
+});
+```
+
+## Security Best Practices
+
+<AccordionGroup>
+  <Accordion title="Store Credentials Securely" icon="lock">
+    Never hardcode API keys or tokens in your source code:
+
+    ```typescript
+    // ✗ Bad - Hardcoded credentials
+    const tonightpass = new TonightPass({
+      baseURL: 'https://api.tonightpass.com',
+      apiKey: 'tp_live_abc123xyz'
+    });
+
+    // ✓ Good - Environment variables
+    const tonightpass = new TonightPass({
+      baseURL: process.env.TONIGHTPASS_API_URL!,
+      apiKey: process.env.TONIGHTPASS_API_KEY!
+    });
+    ```
+  </Accordion>
+
+  <Accordion title="Keep API Keys Server-Side" icon="server">
+    API keys should only be used in server-side code, never in client-side applications:
+
+    ```typescript
+    // ✗ Bad - Client-side code
+    // Don't do this in browser JavaScript!
+    const tonightpass = new TonightPass({
+      apiKey: 'your-api-key'  // This will be exposed!
+    });
+
+    // ✓ Good - Server-side only
+    // Use this pattern in Node.js/Next.js API routes
+    export async function GET(request: Request) {
+      const tonightpass = new TonightPass({
+        apiKey: process.env.TONIGHTPASS_API_KEY!
+      });
+      // ...
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Rotate Access Tokens" icon="rotate">
+    Implement token refresh to maintain security:
+
+    ```typescript
+    async function ensureValidToken() {
+      const token = await getStoredToken();
+      const expiresAt = await getTokenExpiry();
+      
+      if (Date.now() >= expiresAt) {
+        const refreshToken = await getRefreshToken();
+        const newToken = await tonightpass.auth.refresh(refreshToken);
+        
+        await storeToken(newToken.accessToken);
+        await storeTokenExpiry(newToken.expiresAt);
+        
+        tonightpass.client.setAccessToken(newToken.accessToken);
+      } else {
+        tonightpass.client.setAccessToken(token);
+      }
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Handle Unauthorized Errors" icon="triangle-exclamation">
+    Properly handle authentication failures:
+
+    ```typescript
+    import { TonightPassAPIError } from '@tonightpass/node';
+
+    try {
+      const profile = await tonightpass.users.me();
+    } catch (error) {
+      if (error instanceof TonightPassAPIError) {
+        if (error.status === 401) {
+          // Token is invalid or expired
+          tonightpass.client.setAccessToken(undefined);
+          // Redirect to login
+        }
+      }
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Use HTTPS Only" icon="shield-check">
+    Always use HTTPS to protect credentials in transit:
+
+    ```typescript
+    // ✓ Good - HTTPS
+    const tonightpass = new TonightPass({
+      baseURL: 'https://api.tonightpass.com',
+      apiKey: process.env.TONIGHTPASS_API_KEY!
+    });
+
+    // ✗ Bad - HTTP (insecure!)
+    const tonightpass = new TonightPass({
+      baseURL: 'http://api.tonightpass.com',
+      apiKey: process.env.TONIGHTPASS_API_KEY!
+    });
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Common Authentication Errors
+
+| Status Code | Error Type | Description | Solution |
+|------------|------------|-------------|----------|
+| `401` | `AuthInvalidCredentials` | Invalid email or password | Verify credentials |
+| `401` | `AuthInvalidToken` | Access token is invalid | Obtain a new token |
+| `401` | `AuthTokenExpired` | Access token has expired | Refresh the token |
+| `401` | `AuthUnauthorized` | Missing or invalid authentication | Check API key and token |
+| `403` | `Forbidden` | Valid auth but insufficient permissions | Check user permissions |
+
+See [Error Handling](/core/error-handling) for more details.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Error Handling" icon="triangle-exclamation" href="/core/error-handling">
+    Learn how to handle authentication errors
+  </Card>
+  <Card title="Auth Module" icon="right-to-bracket" href="/modules/auth">
+    Explore authentication methods
+  </Card>
+  <Card title="User Module" icon="user" href="/modules/users">
+    Work with authenticated user data
+  </Card>
+  <Card title="API Keys" icon="key" href="/modules/api-keys">
+    Manage API key authentication
+  </Card>
+</CardGroup>

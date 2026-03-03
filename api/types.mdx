@@ -1,0 +1,427 @@
+---
+title: "Types"
+description: "Core type definitions for Tonight Pass SDK REST client"
+---
+
+## API Response Types
+
+The Tonight Pass API wraps all responses in a standardized envelope that indicates success or failure.
+
+### APIResponse
+
+Union type representing all possible API responses.
+
+```typescript
+type APIResponse<T> = SuccessfulAPIResponse<T> | ErroredAPIResponse;
+```
+
+<ParamField path="T" type="any">
+  The type of the response data on success
+</ParamField>
+
+Every API response will be one of:
+- `SuccessfulAPIResponse<T>` when the request succeeds
+- `ErroredAPIResponse` when the request fails
+
+### SuccessfulAPIResponse
+
+Represents a successful API response.
+
+```typescript
+type SuccessfulAPIResponse<T> = {
+  success: true;
+  data: T;
+};
+```
+
+<ResponseField name="success" type="true" required>
+  Always `true` for successful responses
+</ResponseField>
+
+<ResponseField name="data" type="T" required>
+  The response data matching the endpoint's return type
+</ResponseField>
+
+**Example:**
+
+```typescript
+const response = await client.get("/organizations/:id", { id: "org-123" });
+
+if (response.success) {
+  // TypeScript knows response.data is an Organization
+  console.log(response.data.name);
+}
+```
+
+### ErroredAPIResponse
+
+Represents a failed API response.
+
+```typescript
+type ErroredAPIResponse = {
+  success: false;
+  message: string;
+  statusCode: number;
+  errors?: {
+    [key: string]: string[];
+  };
+};
+```
+
+<ResponseField name="success" type="false" required>
+  Always `false` for error responses
+</ResponseField>
+
+<ResponseField name="message" type="string" required>
+  Human-readable error message
+</ResponseField>
+
+<ResponseField name="statusCode" type="number" required>
+  HTTP status code (e.g., 400, 404, 500)
+</ResponseField>
+
+<ResponseField name="errors" type="Record<string, string[]>">
+  Validation errors by field name. Only present for validation failures (typically 400 status)
+</ResponseField>
+
+**Example:**
+
+```typescript
+try {
+  const response = await client.post("/organizations", {
+    // Missing required fields
+  });
+} catch (error) {
+  if (error instanceof TonightPassAPIError) {
+    console.error(error.data.message); // "Validation failed"
+    console.error(error.data.statusCode); // 400
+    console.error(error.data.errors); // { name: ["Name is required"] }
+  }
+}
+```
+
+### PromisedAPIResponse
+
+Wraps an API response in a Promise for async operations.
+
+```typescript
+type PromisedAPIResponse<T> = Promise<APIResponse<T>>;
+```
+
+<ParamField path="T" type="any">
+  The type of the response data on success
+</ParamField>
+
+## Query Types
+
+Types for handling URL query parameters and path parameters.
+
+### StringifiedQueryValue
+
+Valid types for query parameter values.
+
+```typescript
+type StringifiedQueryValue = string | string[];
+```
+
+Query parameters must be strings or arrays of strings:
+- `string`: Single value (e.g., `?filter=active`)
+- `string[]`: Multiple values (e.g., `?tags=music&tags=festival`)
+
+**Example:**
+
+```typescript
+const query = {
+  filter: "active",           // string
+  tags: ["music", "festival"], // string[]
+  page: "1"                    // string (not number)
+};
+```
+
+### StringifiedQuery
+
+Transforms all properties of an object to stringified query values.
+
+```typescript
+type StringifiedQuery<T> = {
+  [K in keyof T]: StringifiedQueryValue;
+};
+```
+
+<ParamField path="T" type="object">
+  The original query parameter type
+</ParamField>
+
+Converts all values in the type to `StringifiedQueryValue`, ensuring type safety for URL query strings.
+
+**Example:**
+
+```typescript
+type OriginalParams = {
+  page: number;
+  limit: number;
+  filter: string;
+};
+
+// Becomes: { page: string | string[], limit: string | string[], filter: string | string[] }
+type QueryVersion = StringifiedQuery<OriginalParams>;
+```
+
+## Cache Types
+
+Types for the built-in caching system.
+
+### CacheOptions
+
+Configuration options for the cache manager.
+
+```typescript
+type CacheOptions = {
+  enabled: boolean;
+  ttl?: number;
+  methods?: Options["method"][];
+};
+```
+
+<ParamField path="enabled" type="boolean" required>
+  Enable or disable caching
+</ParamField>
+
+<ParamField path="ttl" type="number" default={60000}>
+  Time-to-live for cache entries in milliseconds (default: 60 seconds)
+</ParamField>
+
+<ParamField path="methods" type="Array<'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'>" default={["GET"]}>
+  HTTP methods to cache. Typically only GET requests are cached
+</ParamField>
+
+**Example:**
+
+```typescript
+const client = new Client({
+  baseURL: 'https://api.tonightpass.com',
+  apiKey: 'your-api-key',
+  cache: {
+    enabled: true,
+    ttl: 300000, // 5 minutes
+    methods: ['GET'] // Only cache GET requests
+  }
+});
+```
+
+### CacheEntry
+
+Internal structure for cached data.
+
+```typescript
+type CacheEntry<T> = {
+  data: T;
+  timestamp: number;
+};
+```
+
+<ResponseField name="data" type="T" required>
+  The cached response data
+</ResponseField>
+
+<ResponseField name="timestamp" type="number" required>
+  Unix timestamp (milliseconds) when the entry was cached
+</ResponseField>
+
+## Type Helpers
+
+Utility types used throughout the SDK.
+
+### ParamValue
+
+Valid types for URL path parameters (from `pathcat` library).
+
+```typescript
+type ParamValue = string | number | boolean;
+```
+
+Path parameters can be:
+- `string`: Text values
+- `number`: Numeric IDs
+- `boolean`: True/false flags
+
+**Example:**
+
+```typescript
+const params = {
+  id: "org-123",           // string
+  page: 1,                 // number
+  includeDeleted: false    // boolean
+};
+
+const url = client.url("/organizations/:id", params);
+```
+
+### Query
+
+Type for query parameters in client methods. This is typically re-exported from the `pathcat` library and represents the combination of path parameters and query strings.
+
+```typescript
+// Conceptual definition (actual implementation from pathcat)
+type Query<Path> = Record<string, ParamValue>;
+```
+
+**Example:**
+
+```typescript
+await client.get("/organizations/:id", {
+  id: "org-123",      // Path parameter
+  include: "members"  // Query parameter
+});
+// Results in: GET /organizations/org-123?include=members
+```
+
+## Error Types
+
+### TonightPassAPIError
+
+See [Client API Reference](/api/client#tonightpassapierror) for full documentation.
+
+Error class thrown when API requests fail. Contains:
+- `message`: Error message
+- `status`: HTTP status code
+- `response`: Full HTTP response
+- `data`: Parsed error response body
+
+**Example:**
+
+```typescript
+try {
+  await client.get("/organizations/:id", { id: "invalid" });
+} catch (error) {
+  if (error instanceof TonightPassAPIError) {
+    console.error(`${error.status}: ${error.message}`);
+    
+    if (error.data.errors) {
+      // Handle validation errors
+      Object.entries(error.data.errors).forEach(([field, messages]) => {
+        console.error(`${field}: ${messages.join(", ")}`);
+      });
+    }
+  }
+}
+```
+
+## Type Guards
+
+Utility functions for runtime type checking.
+
+### Checking Response Success
+
+```typescript
+function isSuccessful<T>(
+  response: APIResponse<T>
+): response is SuccessfulAPIResponse<T> {
+  return response.success === true;
+}
+
+function isErrored<T>(
+  response: APIResponse<T>
+): response is ErroredAPIResponse {
+  return response.success === false;
+}
+```
+
+**Usage:**
+
+```typescript
+const response = await client.get("/organizations/:id", { id: "org-123" });
+
+if (isSuccessful(response)) {
+  // TypeScript narrows type to SuccessfulAPIResponse
+  console.log(response.data.name);
+} else {
+  // TypeScript narrows type to ErroredAPIResponse
+  console.error(response.message);
+}
+```
+
+## Working with Types
+
+### Extracting Types from Endpoints
+
+```typescript
+import type { ResponseFor, Body } from '@tonightpass/node';
+
+// Get the response type for an endpoint
+type Organization = ResponseFor<"GET", "/organizations/:id">;
+
+// Get the request body type for an endpoint
+type CreateEventDto = Body<"POST", "/organizations/:organizationId/events">;
+
+// Use in your application
+function displayOrganization(org: Organization) {
+  console.log(`${org.name} - ${org.description}`);
+}
+
+function validateEventData(data: CreateEventDto) {
+  // TypeScript ensures data matches the API requirements
+  return data.name && data.startDate && data.endDate;
+}
+```
+
+### Generic Request Handler
+
+```typescript
+import type { PathsFor, ResponseFor, Body } from '@tonightpass/node';
+
+async function makeRequest<
+  M extends 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
+  P extends PathsFor<M>
+>(
+  method: M,
+  path: P,
+  body?: Body<M, P>
+): Promise<ResponseFor<M, P>> {
+  switch (method) {
+    case 'GET':
+      return client.get(path as PathsFor<'GET'>);
+    case 'POST':
+      return client.post(path as PathsFor<'POST'>, body!);
+    case 'PUT':
+      return client.put(path as PathsFor<'PUT'>, body!);
+    case 'PATCH':
+      return client.patch(path as PathsFor<'PATCH'>, body!);
+    case 'DELETE':
+      return client.delete(path as PathsFor<'DELETE'>, body!);
+  }
+}
+
+// Fully type-safe usage
+const org = await makeRequest('GET', '/organizations/:id');
+const event = await makeRequest('POST', '/organizations/:organizationId/events', {
+  name: 'Festival',
+  startDate: '2024-07-15',
+  endDate: '2024-07-17'
+});
+```
+
+### Response Handling Pattern
+
+```typescript
+import type { APIResponse } from '@tonightpass/node';
+
+function handleResponse<T>(
+  response: APIResponse<T>
+): T {
+  if (!response.success) {
+    throw new Error(response.message);
+  }
+  return response.data;
+}
+
+// Usage
+try {
+  const org = handleResponse(
+    await client.get('/organizations/:id', { id: 'org-123' })
+  );
+  console.log(org.name);
+} catch (error) {
+  console.error('Request failed:', error.message);
+}
+```

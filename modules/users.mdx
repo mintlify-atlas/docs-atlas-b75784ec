@@ -1,0 +1,460 @@
+---
+title: 'Users'
+description: 'Manage user accounts, profiles, posts, and bookings'
+icon: 'users'
+---
+
+The Users module provides comprehensive methods to manage user accounts, profiles, posts, notifications, and bookings.
+
+## User Management
+
+### getAll
+
+Get all users (admin function).
+
+```typescript
+const users = await tonightpass.users.getAll();
+console.log(`Total users: ${users.length}`);
+```
+
+**Returns:** `Promise<User[]>`
+
+<Note>
+  This method typically requires admin privileges.
+</Note>
+
+---
+
+### get
+
+Get a specific user by ID or username.
+
+```typescript
+const user = await tonightpass.users.get('johndoe');
+console.log('User:', user.username);
+```
+
+<ParamField path="userId" type="string" required>
+  User ID or username (prefixed with @)
+</ParamField>
+
+**Returns:** `Promise<User>`
+
+---
+
+### me
+
+Get the authenticated user's information.
+
+```typescript
+const currentUser = await tonightpass.users.me();
+console.log('Logged in as:', currentUser.username);
+console.log('Email:', currentUser.email);
+```
+
+**Returns:** `Promise<User>`
+
+---
+
+### check
+
+Check if a username or email is available.
+
+```typescript
+const result = await tonightpass.users.check('newusername', true);
+
+if (result.available) {
+  console.log('Username is available!');
+} else {
+  console.log('Username taken. Suggestions:', result.suggestions);
+}
+```
+
+<ParamField path="identifier" type="string" required>
+  Username or email to check
+</ParamField>
+
+<ParamField path="suggestions" type="boolean">
+  Whether to return alternative suggestions if unavailable (default: false)
+</ParamField>
+
+**Returns:** `Promise<CheckResult>`
+
+---
+
+### update
+
+Update user information.
+
+```typescript
+const updated = await tonightpass.users.update('@johndoe', {
+  displayName: 'John Doe',
+  bio: 'Software developer and music enthusiast',
+  website: 'https://johndoe.com',
+});
+```
+
+<ParamField path="userId" type="string" required>
+  User ID or username (prefixed with @)
+</ParamField>
+
+<ParamField path="data" type="UpdateUserDto" required>
+  The data to update
+</ParamField>
+
+**Returns:** `Promise<User>`
+
+---
+
+### uploadFile
+
+Upload a file for a user (avatar, banner, etc.).
+
+```typescript
+const file = new File([blob], 'avatar.jpg', { type: 'image/jpeg' });
+
+await tonightpass.users.uploadFile('@johndoe', 'avatar', file);
+```
+
+<ParamField path="userId" type="string" required>
+  User ID or username (prefixed with @)
+</ParamField>
+
+<ParamField path="userFileType" type="UserFileType" required>
+  Type of file (e.g., 'avatar', 'banner')
+</ParamField>
+
+<ParamField path="file" type="File | FileObject" required>
+  The file to upload
+</ParamField>
+
+**Returns:** `Promise<FileUploadResponse>`
+
+---
+
+### uploadTempFile
+
+Upload a temporary file (useful during registration).
+
+```typescript
+const file = new File([blob], 'temp-avatar.jpg', { type: 'image/jpeg' });
+const result = await tonightpass.users.uploadTempFile('avatar', file);
+```
+
+<ParamField path="userFileType" type="UserFileType" required>
+  Type of file
+</ParamField>
+
+<ParamField path="file" type="File | FileObject" required>
+  The file to upload
+</ParamField>
+
+**Returns:** `Promise<TempFileUploadResponse>`
+
+## Nested Modules
+
+### bookings
+
+Manage user bookings and tickets.
+
+```typescript
+// Get all bookings
+const bookings = await tonightpass.users.bookings.getAll();
+
+// Get current user's bookings
+const myBookings = await tonightpass.users.bookings.me();
+
+// Get specific booking
+const booking = await tonightpass.users.bookings.get(bookingId);
+
+// Access tickets
+const tickets = await tonightpass.users.bookings.tickets.getAll(bookingId);
+```
+
+### notifications
+
+Manage user notifications.
+
+```typescript
+// Get notifications
+const notifications = await tonightpass.users.notifications.me();
+
+// Count unread notifications
+const count = await tonightpass.users.notifications.count({ 
+  unseen: true 
+});
+
+// Mark notifications as read
+await tonightpass.users.notifications.read();
+```
+
+### posts
+
+Manage user posts.
+
+```typescript
+// Get posts by username
+const posts = await tonightpass.users.posts.getByUsername('johndoe');
+
+// Get specific post
+const post = await tonightpass.users.posts.getByUsernameAndId(
+  'johndoe',
+  postId
+);
+
+// Create a post
+const newPost = await tonightpass.users.posts.create({
+  content: 'Hello, world!',
+});
+
+// Update post
+await tonightpass.users.posts.update(postId, {
+  content: 'Updated content',
+});
+
+// Delete post
+await tonightpass.users.posts.delete(postId);
+
+// Upload media
+const media = await tonightpass.users.posts.uploadMedia(formData);
+```
+
+### postsComments
+
+Manage post comments.
+
+```typescript
+// Access through users module
+const comments = await tonightpass.users.postsComments.getAll(postId);
+```
+
+### postsReposts
+
+Manage post reposts.
+
+```typescript
+// Repost functionality
+const reposts = await tonightpass.users.postsReposts.getAll(postId);
+```
+
+## Usage Examples
+
+<CodeGroup>
+```typescript Get Current User
+import { TonightPass } from '@tonightpass/sdk';
+
+const tonightpass = new TonightPass({
+  apiKey: process.env.TONIGHTPASS_API_KEY,
+});
+
+const currentUser = await tonightpass.users.me();
+
+console.log('Current User:');
+console.log(`Username: @${currentUser.username}`);
+console.log(`Email: ${currentUser.email}`);
+console.log(`Display Name: ${currentUser.displayName}`);
+console.log(`Bio: ${currentUser.bio || 'No bio'}`);
+console.log(`Verified: ${currentUser.verified}`);
+```
+
+```typescript Update Profile
+import { TonightPass } from '@tonightpass/sdk';
+
+const tonightpass = new TonightPass({
+  apiKey: process.env.TONIGHTPASS_API_KEY,
+});
+
+// Get current user
+const user = await tonightpass.users.me();
+
+// Update profile
+const updated = await tonightpass.users.update(`@${user.username}`, {
+  displayName: 'John Doe',
+  bio: 'Full-stack developer | Music lover | Event enthusiast',
+  website: 'https://johndoe.com',
+  location: 'San Francisco, CA',
+});
+
+console.log('Profile updated successfully!');
+
+// Upload avatar
+const avatarFile = new File([avatarBlob], 'avatar.jpg', {
+  type: 'image/jpeg',
+});
+
+await tonightpass.users.uploadFile(
+  `@${user.username}`,
+  'avatar',
+  avatarFile
+);
+
+console.log('Avatar uploaded!');
+```
+
+```typescript Check Username Availability
+import { TonightPass } from '@tonightpass/sdk';
+
+const tonightpass = new TonightPass({
+  apiKey: process.env.TONIGHTPASS_API_KEY,
+});
+
+const desiredUsername = 'johndoe';
+
+const result = await tonightpass.users.check(desiredUsername, true);
+
+if (result.available) {
+  console.log(`✓ Username "${desiredUsername}" is available!`);
+} else {
+  console.log(`✗ Username "${desiredUsername}" is taken.`);
+  
+  if (result.suggestions && result.suggestions.length > 0) {
+    console.log('\nSuggested alternatives:');
+    result.suggestions.forEach((suggestion, index) => {
+      console.log(`  ${index + 1}. ${suggestion}`);
+    });
+  }
+}
+```
+
+```typescript Manage Posts
+import { TonightPass } from '@tonightpass/sdk';
+
+const tonightpass = new TonightPass({
+  apiKey: process.env.TONIGHTPASS_API_KEY,
+});
+
+// Create a new post
+const newPost = await tonightpass.users.posts.create({
+  content: 'Excited to announce our upcoming event! 🎉',
+});
+
+console.log('Post created:', newPost.id);
+
+// Get user's posts
+const user = await tonightpass.users.me();
+const posts = await tonightpass.users.posts.getByUsername(user.username);
+
+console.log(`User has ${posts.length} posts`);
+
+// Update a post
+await tonightpass.users.posts.update(newPost.id, {
+  content: 'Excited to announce our upcoming event! 🎉 Limited tickets!',
+});
+
+console.log('Post updated');
+
+// Delete a post
+await tonightpass.users.posts.delete(newPost.id);
+console.log('Post deleted');
+```
+
+```typescript Notifications Management
+import { TonightPass } from '@tonightpass/sdk';
+
+const tonightpass = new TonightPass({
+  apiKey: process.env.TONIGHTPASS_API_KEY,
+});
+
+// Get notification count
+const unreadCount = await tonightpass.users.notifications.count({
+  unseen: true,
+});
+
+console.log(`You have ${unreadCount} unread notifications`);
+
+if (unreadCount > 0) {
+  // Get all notifications
+  const notifications = await tonightpass.users.notifications.me();
+  
+  console.log('\nNotifications:');
+  notifications.forEach(notification => {
+    console.log(`- ${notification.type}: ${notification.message}`);
+    console.log(`  ${new Date(notification.createdAt).toLocaleString()}`);
+  });
+  
+  // Mark all as read
+  await tonightpass.users.notifications.read();
+  console.log('\nAll notifications marked as read');
+}
+```
+
+```typescript Bookings and Tickets
+import { TonightPass } from '@tonightpass/sdk';
+
+const tonightpass = new TonightPass({
+  apiKey: process.env.TONIGHTPASS_API_KEY,
+});
+
+// Get all bookings
+const bookings = await tonightpass.users.bookings.me();
+
+console.log(`You have ${bookings.length} bookings`);
+
+bookings.forEach(booking => {
+  console.log(`\nBooking: ${booking.event.name}`);
+  console.log(`Date: ${new Date(booking.event.startDate).toLocaleDateString()}`);
+  console.log(`Status: ${booking.status}`);
+});
+
+// Get specific booking details
+if (bookings.length > 0) {
+  const firstBooking = bookings[0];
+  const bookingDetails = await tonightpass.users.bookings.get(
+    firstBooking.id
+  );
+  
+  console.log('\nBooking Details:', bookingDetails);
+  
+  // Get tickets for this booking
+  const tickets = await tonightpass.users.bookings.tickets.getAll(
+    firstBooking.id
+  );
+  
+  console.log(`Tickets (${tickets.length}):`);
+  tickets.forEach((ticket, index) => {
+    console.log(`  ${index + 1}. ${ticket.type} - ${ticket.status}`);
+  });
+}
+```
+</CodeGroup>
+
+## User Object
+
+```typescript
+interface User {
+  id: string;
+  username: string;
+  email: string;
+  displayName: string;
+  bio?: string;
+  avatar?: string;
+  banner?: string;
+  website?: string;
+  location?: string;
+  verified: boolean;
+  createdAt: string;
+  updatedAt: string;
+  // ... additional fields
+}
+```
+
+## Best Practices
+
+<Tip>
+  - Always validate user input before updating profiles
+  - Implement proper file size and type validation for uploads
+  - Cache user data locally to reduce API calls
+  - Use the `check` method before allowing username registration
+  - Implement proper error handling for all user operations
+</Tip>
+
+<Warning>
+  User data contains sensitive information. Always ensure proper authentication and authorization before accessing or modifying user data.
+</Warning>
+
+## Related Modules
+
+- [Auth](/modules/auth) - User authentication and registration
+- [Profiles](/modules/profiles) - View public user profiles
+- [Feed](/modules/feed) - Access user content feeds
+- [Orders](/modules/orders) - View user order history

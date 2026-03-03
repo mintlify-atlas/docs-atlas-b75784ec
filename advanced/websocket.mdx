@@ -1,0 +1,503 @@
+---
+title: "WebSocket Support"
+description: "Real-time communication with WebSocket connections"
+icon: "bolt"
+---
+
+The Tonight Pass SDK provides WebSocket support for real-time updates on channels, messages, and other events.
+
+## Overview
+
+WebSocket connections enable real-time bidirectional communication for:
+
+- Real-time chat messages
+- Typing indicators
+- Channel updates
+- Member join/leave events
+- Live notifications
+
+<Note>
+  WebSocket support was added in version 0.0.180 with cross-platform compatibility for Node.js, browsers, and React Native.
+</Note>
+
+## Getting Started
+
+### Basic Connection
+
+<CodeGroup>
+```typescript Node.js
+import { channelsWS } from "tonightpass/ws";
+
+const ws = channelsWS({
+  baseURL: "wss://api.tonightpass.com",
+  debug: true,
+  maxReconnectAttempts: 5,
+  reconnectInterval: 2000
+});
+
+// Connect to a specific channel
+await ws.connect("channel-id", "your-access-token");
+
+// Listen for new messages
+ws.onMessageCreate((event) => {
+  console.log("New message:", event.data);
+});
+```
+
+```typescript React
+import { useWebSocket } from "tonightpass/react";
+
+function ChatComponent({ channelId }: { channelId: string }) {
+  const { data: messages, subscribe } = useWebSocket(
+    `/channels/~me/:channelId/ws`,
+    { channelId, token: "your-access-token" }
+  );
+
+  useEffect(() => {
+    const unsubscribe = subscribe("channel_message_create", (event) => {
+      console.log("New message:", event.data);
+    });
+
+    return unsubscribe;
+  }, [subscribe]);
+
+  return <div>{/* Render messages */}</div>;
+}
+```
+</CodeGroup>
+
+## WebSocket Client
+
+### Configuration Options
+
+```typescript packages/node/src/ws/types/index.ts
+export type WebSocketClientOptions = {
+  baseURL: string;
+  reconnectInterval?: number;
+  maxReconnectAttempts?: number;
+  debug?: boolean;
+};
+```
+
+<ParamField path="baseURL" type="string" required>
+  WebSocket server URL (e.g., `wss://api.tonightpass.com`)
+</ParamField>
+
+<ParamField path="reconnectInterval" type="number" default="1000">
+  Milliseconds to wait between reconnection attempts
+</ParamField>
+
+<ParamField path="maxReconnectAttempts" type="number" default="3">
+  Maximum number of reconnection attempts before giving up
+</ParamField>
+
+<ParamField path="debug" type="boolean" default="false">
+  Enable debug logging for connection events
+</ParamField>
+
+### Connection Methods
+
+The SDK provides multiple connection methods for different use cases:
+
+<Tabs>
+  <Tab title="Single Channel">
+    Connect to a specific channel:
+
+    ```typescript packages/node/src/ws/sdk/channels.ts
+    connect: (channelId: string, token?: string) =>
+      client.connectToChannel(channelId, { token })
+    ```
+
+    **Example:**
+    ```typescript
+    await ws.connect("channel-id-123", "access-token");
+    ```
+  </Tab>
+
+  <Tab title="Organization Channel">
+    Connect to an organization-specific channel:
+
+    ```typescript packages/node/src/ws/sdk/channels.ts
+    connectToOrganization: (
+      organizationSlug: string,
+      channelId: string,
+      token?: string
+    ) => client.connectToOrganizationChannel(organizationSlug, channelId, { token })
+    ```
+
+    **Example:**
+    ```typescript
+    await ws.connectToOrganization("my-org", "channel-id-123", "access-token");
+    ```
+  </Tab>
+
+  <Tab title="User Channels">
+    Connect to all user channels:
+
+    ```typescript packages/node/src/ws/sdk/channels.ts
+    connectToUserChannels: (token?: string) =>
+      client.connectToUserChannels({ token })
+    ```
+
+    **Example:**
+    ```typescript
+    await ws.connectToUserChannels("access-token");
+    ```
+  </Tab>
+
+  <Tab title="Organization Channels">
+    Connect to all channels in an organization:
+
+    ```typescript packages/node/src/ws/sdk/channels.ts
+    connectToOrganizationChannels: (organizationSlug: string, token?: string) =>
+      client.connectToOrganizationChannels(organizationSlug, { token })
+    ```
+
+    **Example:**
+    ```typescript
+    await ws.connectToOrganizationChannels("my-org", "access-token");
+    ```
+  </Tab>
+</Tabs>
+
+## Available Endpoints
+
+The SDK supports typed WebSocket paths:
+
+```typescript packages/node/src/ws/endpoints.ts
+export type WebSocketEndpoints =
+  | WebSocketEndpoint<"/channels/~me/ws", WebSocketConnectOptions>
+  | WebSocketEndpoint<
+      "/channels/~me/:channelId/ws",
+      WebSocketConnectOptions & { channelId: string }
+    >
+  | WebSocketEndpoint<
+      "/channels/:organizationSlug/ws",
+      WebSocketConnectOptions & { organizationSlug: string }
+    >
+  | WebSocketEndpoint<
+      "/channels/:organizationSlug/:channelId/ws",
+      WebSocketConnectOptions & { organizationSlug: string; channelId: string }
+    >;
+```
+
+## Event Handling
+
+### Message Events
+
+<Accordion title="channel_message_create" icon="message">
+  Triggered when a new message is created:
+
+  ```typescript packages/node/src/ws/types/channels/index.ts
+  export interface ChannelMessageCreateEvent
+    extends WebSocketEvent<ChannelMessage> {
+    type: "channel_message_create";
+  }
+  ```
+
+  **Usage:**
+  ```typescript
+  ws.onMessageCreate((event) => {
+    console.log("New message:", event.data.content);
+    console.log("From:", event.data.author.username);
+  });
+  ```
+</Accordion>
+
+<Accordion title="channel_message_update" icon="pen-to-square">
+  Triggered when a message is edited:
+
+  ```typescript packages/node/src/ws/types/channels/index.ts
+  export interface ChannelMessageUpdateEvent
+    extends WebSocketEvent<ChannelMessage> {
+    type: "channel_message_update";
+  }
+  ```
+
+  **Usage:**
+  ```typescript
+  ws.onMessageUpdate((event) => {
+    console.log("Message edited:", event.data.id);
+  });
+  ```
+</Accordion>
+
+<Accordion title="channel_message_delete" icon="trash">
+  Triggered when a message is deleted:
+
+  ```typescript packages/node/src/ws/types/channels/index.ts
+  export interface ChannelMessageDeleteEvent
+    extends WebSocketEvent<{
+      id: string;
+      channelId: string;
+    }> {
+    type: "channel_message_delete";
+  }
+  ```
+
+  **Usage:**
+  ```typescript
+  ws.onMessageDelete((event) => {
+    console.log("Message deleted:", event.data.id);
+  });
+  ```
+</Accordion>
+
+### Channel Events
+
+<Accordion title="channel_update" icon="arrows-rotate">
+  ```typescript packages/node/src/ws/types/channels/index.ts
+  export interface ChannelUpdateEvent extends WebSocketEvent<Channel> {
+    type: "channel_update";
+  }
+  ```
+
+  **Usage:**
+  ```typescript
+  ws.onChannelUpdate((event) => {
+    console.log("Channel updated:", event.data.name);
+  });
+  ```
+</Accordion>
+
+<Accordion title="channel_delete" icon="xmark">
+  ```typescript packages/node/src/ws/types/channels/index.ts
+  export interface ChannelDeleteEvent extends WebSocketEvent<{ id: string }> {
+    type: "channel_delete";
+  }
+  ```
+
+  **Usage:**
+  ```typescript
+  ws.onChannelDelete((event) => {
+    console.log("Channel deleted:", event.data.id);
+  });
+  ```
+</Accordion>
+
+### Member Events
+
+<Accordion title="channel_member_join" icon="user-plus">
+  ```typescript packages/node/src/ws/types/channels/index.ts
+  export interface ChannelMemberJoinEvent
+    extends WebSocketEvent<{
+      channel: Channel;
+      user: User;
+    }> {
+    type: "channel_member_join";
+  }
+  ```
+
+  **Usage:**
+  ```typescript
+  ws.onMemberJoin((event) => {
+    console.log(`${event.data.user.username} joined ${event.data.channel.name}`);
+  });
+  ```
+</Accordion>
+
+<Accordion title="channel_member_leave" icon="user-minus">
+  ```typescript packages/node/src/ws/types/channels/index.ts
+  export interface ChannelMemberLeaveEvent
+    extends WebSocketEvent<{
+      channelId: string;
+      userId: string;
+    }> {
+    type: "channel_member_leave";
+  }
+  ```
+
+  **Usage:**
+  ```typescript
+  ws.onMemberLeave((event) => {
+    console.log(`User ${event.data.userId} left channel`);
+  });
+  ```
+</Accordion>
+
+### Typing Indicators
+
+<Accordion title="typing_start" icon="keyboard">
+  ```typescript packages/node/src/ws/types/channels/index.ts
+  export interface TypingStartEvent
+    extends WebSocketEvent<{
+      channelId: string;
+      userId: string;
+      username: string;
+    }> {
+    type: "typing_start";
+  }
+  ```
+
+  **Usage:**
+  ```typescript
+  ws.onTypingStart((event) => {
+    console.log(`${event.data.username} is typing...`);
+  });
+  ```
+</Accordion>
+
+<Accordion title="typing_stop" icon="keyboard">
+  ```typescript packages/node/src/ws/types/channels/index.ts
+  export interface TypingStopEvent
+    extends WebSocketEvent<{
+      channelId: string;
+      userId: string;
+    }> {
+    type: "typing_stop";
+  }
+  ```
+
+  **Usage:**
+  ```typescript
+  ws.onTypingStop((event) => {
+    console.log(`User ${event.data.userId} stopped typing`);
+  });
+  ```
+</Accordion>
+
+## Advanced Features
+
+### Auto-Reconnection
+
+The client automatically attempts to reconnect when the connection is lost:
+
+```typescript packages/node/src/ws/client/index.ts
+private handleReconnect<P extends WebSocketPaths>(
+  path: P,
+  options: WebSocketOptionsFor<P>
+) {
+  if (this.reconnectAttempts >= this.options.maxReconnectAttempts!) {
+    this.log("Max reconnect attempts reached");
+    return;
+  }
+
+  this.isReconnecting = true;
+  this.reconnectAttempts++;
+
+  this.reconnectTimer = setTimeout(() => {
+    this.connect(path, options).catch((error) => {
+      this.log("Reconnection failed:", error);
+    });
+  }, this.options.reconnectInterval);
+}
+```
+
+**Monitor reconnection status:**
+
+```typescript
+console.log("Connected:", ws.connected);
+console.log("Reconnecting:", ws.reconnecting);
+```
+
+### Typing Indicators
+
+Send typing indicators to other users:
+
+```typescript
+// Start typing indicator
+ws.startTyping("channel-id");
+
+// Stop typing indicator
+ws.stopTyping("channel-id");
+```
+
+### Channel Subscriptions
+
+Dynamically subscribe/unsubscribe from channels:
+
+```typescript
+// Subscribe to a channel
+ws.subscribeToChannel("new-channel-id");
+
+// Unsubscribe from a channel
+ws.unsubscribeFromChannel("old-channel-id");
+```
+
+### Wildcard Event Listener
+
+Listen to all events:
+
+```typescript
+ws.onAny((event) => {
+  console.log("Event received:", event.type, event.data);
+});
+```
+
+## Authentication
+
+<Warning>
+  WebSocket authentication uses subprotocols instead of headers for better compatibility with browsers and React Native.
+</Warning>
+
+```typescript packages/node/src/ws/client/index.ts
+// Pass token via subprotocol if present (cleaner than query params)
+const protocols: string[] = [];
+if ("token" in options && typeof options.token === "string") {
+  protocols.push(`access_token.${options.token}`);
+}
+
+this.ws =
+  protocols.length > 0
+    ? new WebSocket(url, protocols)
+    : new WebSocket(url);
+```
+
+**Usage:**
+
+```typescript
+const ws = channelsWS();
+await ws.connect("channel-id", "your-access-token");
+```
+
+## Cleanup
+
+Always disconnect when done:
+
+```typescript
+// Disconnect and clean up
+ws.disconnect();
+```
+
+<Note>
+  In React, use cleanup functions in `useEffect` to automatically disconnect when components unmount.
+</Note>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Handle Connection States" icon="signal">
+    Always check connection status before sending data:
+    ```typescript
+    if (ws.connected) {
+      ws.startTyping(channelId);
+    }
+    ```
+  </Card>
+
+  <Card title="Implement Reconnection Logic" icon="arrows-rotate">
+    Configure appropriate reconnection settings:
+    ```typescript
+    const ws = channelsWS({
+      maxReconnectAttempts: 5,
+      reconnectInterval: 2000
+    });
+    ```
+  </Card>
+
+  <Card title="Clean Up Listeners" icon="broom">
+    Remove event listeners when no longer needed:
+    ```typescript
+    const unsubscribe = ws.onMessageCreate(handler);
+    // Later...
+    unsubscribe();
+    ```
+  </Card>
+
+  <Card title="Use Debug Mode" icon="bug">
+    Enable debug logging during development:
+    ```typescript
+    const ws = channelsWS({ debug: true });
+    ```
+  </Card>
+</CardGroup>

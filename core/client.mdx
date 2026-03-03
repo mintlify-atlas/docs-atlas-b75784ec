@@ -1,0 +1,343 @@
+---
+title: 'Client'
+description: 'Core HTTP client for making API requests'
+icon: 'globe'
+---
+
+The `Client` class is the foundation of the Tonight Pass SDK, providing a type-safe HTTP client for interacting with the Tonight Pass API.
+
+## ClientOptions
+
+Configure the client with these options:
+
+<ParamField path="baseURL" type="string" required>
+  The base URL for API requests. Defaults to `https://api.tonightpass.com`
+</ParamField>
+
+<ParamField path="apiKey" type="string">
+  Your API key for authentication. Used for server-side requests.
+</ParamField>
+
+<ParamField path="accessToken" type="string">
+  User access token for authenticated requests. Can be set dynamically with `setAccessToken()`.
+</ParamField>
+
+<ParamField path="cache" type="CacheOptions">
+  Optional caching configuration. See [Caching](/core/caching) for details.
+  
+  ```typescript
+  {
+    enabled: boolean;
+    ttl?: number;        // Time to live in milliseconds (default: 60000)
+    methods?: string[];  // HTTP methods to cache (default: ["GET"])
+  }
+  ```
+</ParamField>
+
+## Creating a Client
+
+<CodeGroup>
+
+```typescript Basic
+import { Client } from '@tonightpass/node';
+
+const client = new Client({
+  baseURL: 'https://api.tonightpass.com',
+  apiKey: 'your-api-key'
+});
+```
+
+```typescript With Access Token
+import { Client } from '@tonightpass/node';
+
+const client = new Client({
+  baseURL: 'https://api.tonightpass.com',
+  apiKey: 'your-api-key',
+  accessToken: 'user-access-token'
+});
+```
+
+```typescript With Caching
+import { Client } from '@tonightpass/node';
+
+const client = new Client({
+  baseURL: 'https://api.tonightpass.com',
+  apiKey: 'your-api-key',
+  cache: {
+    enabled: true,
+    ttl: 60000,
+    methods: ['GET']
+  }
+});
+```
+
+</CodeGroup>
+
+## HTTP Methods
+
+The Client provides type-safe methods for all HTTP verbs:
+
+### GET
+
+```typescript
+async get<Path extends PathsFor<"GET">>(
+  path: Path,
+  query?: Query<Path>,
+  options?: APIRequestOptions
+): Promise<ResponseFor<"GET", Path>>
+```
+
+<CodeGroup>
+
+```typescript Example
+const event = await client.get('/v1/events/:id', {
+  id: 'event-123'
+});
+```
+
+```typescript With Query Params
+const events = await client.get('/v1/events', {
+  limit: 10,
+  offset: 0
+});
+```
+
+</CodeGroup>
+
+### POST
+
+```typescript
+async post<Path extends PathsFor<"POST">>(
+  path: Path,
+  body: Body<"POST", Path>,
+  query?: Query<Path>,
+  options?: APIRequestOptions
+): Promise<ResponseFor<"POST", Path>>
+```
+
+```typescript Example
+const newEvent = await client.post('/v1/organizations/:organizationId/events', 
+  {
+    title: 'Summer Concert',
+    description: 'An amazing outdoor concert',
+    startDate: '2026-07-15T19:00:00Z',
+    endDate: '2026-07-15T23:00:00Z'
+  },
+  { organizationId: 'org-123' }
+);
+```
+
+### PUT
+
+```typescript
+async put<Path extends PathsFor<"PUT">>(
+  path: Path,
+  body: Body<"PUT", Path>,
+  query?: Query<Path>,
+  options?: APIRequestOptions
+): Promise<ResponseFor<"PUT", Path>>
+```
+
+```typescript Example
+const updated = await client.put('/v1/events/:id',
+  {
+    title: 'Updated Event Title',
+    description: 'Updated description'
+  },
+  { id: 'event-123' }
+);
+```
+
+### PATCH
+
+```typescript
+async patch<Path extends PathsFor<"PATCH">>(
+  path: Path,
+  body: Body<"PATCH", Path>,
+  query?: Query<Path>,
+  options?: APIRequestOptions
+): Promise<ResponseFor<"PATCH", Path>>
+```
+
+```typescript Example
+const patched = await client.patch('/v1/events/:id',
+  { visibility: 'public' },
+  { id: 'event-123' }
+);
+```
+
+### DELETE
+
+```typescript
+async delete<Path extends PathsFor<"DELETE">>(
+  path: Path,
+  body: Body<"DELETE", Path>,
+  query?: Query<Path>,
+  options?: APIRequestOptions
+): Promise<ResponseFor<"DELETE", Path>>
+```
+
+```typescript Example
+await client.delete('/v1/events/:id', 
+  {},
+  { id: 'event-123' }
+);
+```
+
+## URL Building
+
+The client includes a built-in URL builder using `pathcat`:
+
+```typescript
+client.url(path: string, params: Record<string, ParamValue>): string
+```
+
+<CodeGroup>
+
+```typescript Path Parameters
+const url = client.url('/v1/events/:id', { id: 'event-123' });
+// Result: https://api.tonightpass.com/v1/events/event-123
+```
+
+```typescript Query Parameters
+const url = client.url('/v1/events', { 
+  limit: 10,
+  category: 'music'
+});
+// Result: https://api.tonightpass.com/v1/events?limit=10&category=music
+```
+
+```typescript Mixed Parameters
+const url = client.url('/v1/organizations/:orgId/events', {
+  orgId: 'org-123',
+  status: 'published'
+});
+// Result: https://api.tonightpass.com/v1/organizations/org-123/events?status=published
+```
+
+</CodeGroup>
+
+## Dynamic Configuration
+
+### Update Options
+
+```typescript
+setOptions(options: ClientOptions): void
+```
+
+Update the client configuration at runtime:
+
+```typescript
+client.setOptions({
+  baseURL: 'https://api.tonightpass.com',
+  apiKey: 'new-api-key',
+  cache: { enabled: true }
+});
+```
+
+### Set Access Token
+
+```typescript
+setAccessToken(accessToken: string | undefined): void
+```
+
+Dynamically update the user access token:
+
+```typescript
+// After user login
+client.setAccessToken(userToken);
+
+// After user logout
+client.setAccessToken(undefined);
+```
+
+<Note>
+  The `setAccessToken` method is useful for managing user sessions without recreating the client instance.
+</Note>
+
+## Cache Management
+
+When caching is enabled, the client provides methods to manage the cache:
+
+```typescript
+// Clear all cached responses
+client.clearCache();
+
+// Get cache statistics
+const stats = client.getCacheStats();
+console.log(`Cached entries: ${stats.size}`);
+console.log(`Cache keys:`, stats.keys);
+```
+
+See [Caching](/core/caching) for more details.
+
+## Type Safety
+
+The Client leverages TypeScript's type system to provide full type safety:
+
+```typescript
+// Path parameters are validated
+const event = await client.get('/v1/events/:id', {
+  id: 'event-123'  // ✓ Valid
+  // organizationId: 'org-123'  // ✗ Error: invalid parameter
+});
+
+// Response types are inferred
+const events = await client.get('/v1/events', {});
+// events is typed as Event[]
+
+// Request body types are validated
+const created = await client.post('/v1/organizations/:organizationId/events',
+  {
+    title: 'Concert',
+    startDate: '2026-07-15T19:00:00Z',
+    // category: 123  // ✗ Error: wrong type
+  },
+  { organizationId: 'org-123' }
+);
+```
+
+## Best Practices
+
+<Card title="Use Environment Variables" icon="shield">
+  Store API keys and tokens in environment variables, never hardcode them.
+  
+  ```typescript
+  const client = new Client({
+    baseURL: process.env.TONIGHTPASS_API_URL,
+    apiKey: process.env.TONIGHTPASS_API_KEY
+  });
+  ```
+</Card>
+
+<Card title="Reuse Client Instances" icon="recycle">
+  Create a single client instance and reuse it throughout your application to benefit from connection pooling and caching.
+</Card>
+
+<Card title="Enable Caching" icon="bolt">
+  Enable caching for read-heavy applications to reduce API calls and improve performance.
+  
+  ```typescript
+  cache: {
+    enabled: true,
+    ttl: 300000  // 5 minutes
+  }
+  ```
+</Card>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="key" href="/core/authentication">
+    Learn about API key and access token authentication
+  </Card>
+  <Card title="Error Handling" icon="triangle-exclamation" href="/core/error-handling">
+    Handle API errors and validation failures
+  </Card>
+  <Card title="Caching" icon="database" href="/core/caching">
+    Configure response caching for better performance
+  </Card>
+  <Card title="API Reference" icon="book" href="/api/client">
+    Explore all available API endpoints
+  </Card>
+</CardGroup>

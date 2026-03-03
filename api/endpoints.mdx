@@ -1,0 +1,377 @@
+---
+title: "Endpoints"
+description: "Type system for API endpoints in Tonight Pass SDK"
+---
+
+## Overview
+
+The Tonight Pass SDK uses a sophisticated type system to provide compile-time type safety for all API endpoints. The endpoint types ensure that:
+
+- Only valid paths can be used with each HTTP method
+- Request bodies match the expected structure
+- Response types are correctly inferred
+- Query parameters are properly typed
+
+## Endpoint Type
+
+The base type that defines the structure of an API endpoint.
+
+```typescript
+type Endpoint<
+  M extends Options["method"],
+  Path extends string,
+  Res,
+  Body = undefined,
+> = {
+  method: M;
+  path: Path;
+  res: Res;
+  body: Body;
+};
+```
+
+<ParamField path="M" type="'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'">
+  The HTTP method for this endpoint
+</ParamField>
+
+<ParamField path="Path" type="string">
+  The URL path pattern (e.g., `/organizations/:id`)
+</ParamField>
+
+<ParamField path="Res" type="any">
+  The response data type
+</ParamField>
+
+<ParamField path="Body" type="any" default="undefined">
+  The request body type (if applicable)
+</ParamField>
+
+**Example:**
+
+```typescript
+type GetOrganization = Endpoint<
+  "GET",
+  "/organizations/:id",
+  Organization,
+  undefined
+>;
+
+type CreateEvent = Endpoint<
+  "POST",
+  "/organizations/:organizationId/events",
+  Event,
+  CreateEventDto
+>;
+```
+
+## Endpoints Union
+
+The `Endpoints` type is a union of all available API endpoints in the Tonight Pass API.
+
+```typescript
+type Endpoints =
+  | ApiKeyEndpoints
+  | AuthEndpoints
+  | CareerEndpoints
+  | ChannelEndpoints
+  | ChannelMessageEndpoints
+  | CurrenciesEndpoints
+  | FeedEndpoints
+  | HealthEndpoints
+  | OrderEndpoints
+  | OrganizationEndpoints
+  | ProfileEndpoints
+  | RoadmapEndpoints
+  | UserEndpoints
+  | WebhookEndpoints
+  | NotificationEndpoints;
+```
+
+This union type contains hundreds of endpoint definitions, each specifying:
+- The HTTP method
+- The path pattern
+- The expected response type
+- The required request body (if any)
+
+## Utility Types
+
+### PathsFor
+
+Extracts all valid paths for a given HTTP method.
+
+```typescript
+type PathsFor<M extends Options["method"]> = Extract<
+  Endpoints,
+  { method: M }
+>["path"];
+```
+
+<ParamField path="M" type="'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'" required>
+  The HTTP method to filter by
+</ParamField>
+
+**Example:**
+
+```typescript
+// Type: "/organizations/:id" | "/users/:id" | "/events/:id" | ...
+type AllGetPaths = PathsFor<"GET">;
+
+// Type: "/organizations" | "/events" | "/users" | ...
+type AllPostPaths = PathsFor<"POST">;
+```
+
+**Usage:**
+
+```typescript
+function makeGetRequest<P extends PathsFor<"GET">>(
+  path: P
+) {
+  // TypeScript ensures path is a valid GET endpoint
+}
+
+makeGetRequest("/organizations/:id"); // ✓ Valid
+makeGetRequest("/invalid/path"); // ✗ Type error
+```
+
+### ResponseFor
+
+Extracts the response type for a specific HTTP method and path.
+
+```typescript
+type ResponseFor<
+  M extends Options["method"],
+  P extends PathsFor<M>,
+> = Extract<Endpoints, { method: M; path: P }>["res"];
+```
+
+<ParamField path="M" type="'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'" required>
+  The HTTP method
+</ParamField>
+
+<ParamField path="P" type="PathsFor<M>" required>
+  The endpoint path
+</ParamField>
+
+**Example:**
+
+```typescript
+// Type: Organization
+type OrgResponse = ResponseFor<"GET", "/organizations/:id">;
+
+// Type: Event
+type EventResponse = ResponseFor<"POST", "/organizations/:organizationId/events">;
+```
+
+**Usage:**
+
+```typescript
+async function fetchOrganization(
+  id: string
+): Promise<ResponseFor<"GET", "/organizations/:id">> {
+  const response = await client.get("/organizations/:id", { id });
+  return response; // Type-checked return value
+}
+```
+
+### Response
+
+Wraps the response type in an `APIResponse` envelope.
+
+```typescript
+type Response<
+  M extends Options["method"],
+  P extends PathsFor<M>,
+> = APIResponse<Extract<Endpoints, { method: M; path: P }>["res"]>;
+```
+
+<ParamField path="M" type="'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'" required>
+  The HTTP method
+</ParamField>
+
+<ParamField path="P" type="PathsFor<M>" required>
+  The endpoint path
+</ParamField>
+
+Returns either `SuccessfulAPIResponse<T>` or `ErroredAPIResponse`.
+
+**Example:**
+
+```typescript
+// Type: SuccessfulAPIResponse<Organization> | ErroredAPIResponse
+type OrgResponse = Response<"GET", "/organizations/:id">;
+```
+
+### PromisedResponse
+
+Wraps the response in a Promise for async operations.
+
+```typescript
+type PromisedResponse<
+  M extends Options["method"],
+  P extends PathsFor<M>,
+> = PromisedAPIResponse<Extract<Endpoints, { method: M; path: P }>["res"]>;
+```
+
+<ParamField path="M" type="'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'" required>
+  The HTTP method
+</ParamField>
+
+<ParamField path="P" type="PathsFor<M>" required>
+  The endpoint path
+</ParamField>
+
+**Example:**
+
+```typescript
+// Type: Promise<SuccessfulAPIResponse<Organization> | ErroredAPIResponse>
+type OrgPromise = PromisedResponse<"GET", "/organizations/:id">;
+```
+
+### Body
+
+Extracts the request body type for a specific HTTP method and path.
+
+```typescript
+type Body<M extends Options["method"], P extends PathsFor<M>> = Extract<
+  Endpoints,
+  { method: M; path: P }
+>["body"];
+```
+
+<ParamField path="M" type="'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'" required>
+  The HTTP method
+</ParamField>
+
+<ParamField path="P" type="PathsFor<M>" required>
+  The endpoint path
+</ParamField>
+
+**Example:**
+
+```typescript
+// Type: CreateEventDto
+type CreateEventBody = Body<"POST", "/organizations/:organizationId/events">;
+
+// Type: UpdateOrganizationDto
+type UpdateOrgBody = Body<"PATCH", "/organizations/:id">;
+```
+
+**Usage:**
+
+```typescript
+function createEvent(
+  organizationId: string,
+  data: Body<"POST", "/organizations/:organizationId/events">
+) {
+  return client.post("/organizations/:organizationId/events", data, {
+    organizationId
+  });
+}
+
+createEvent("org-123", {
+  name: "Festival",
+  startDate: "2024-07-15",
+  endDate: "2024-07-17"
+}); // ✓ Type-checked
+```
+
+### QueryParams
+
+Extracts query parameters for a specific endpoint.
+
+```typescript
+type QueryParams<
+  M extends Options["method"],
+  P extends PathsFor<M>,
+> = StringifiedQuery<Extract<Endpoints, { method: M; path: P }>["body"]>;
+```
+
+<ParamField path="M" type="'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'" required>
+  The HTTP method
+</ParamField>
+
+<ParamField path="P" type="PathsFor<M>" required>
+  The endpoint path
+</ParamField>
+
+Returns a type where all values are `StringifiedQueryValue` (string or string arrays).
+
+## Type Safety Examples
+
+### Compile-time Path Validation
+
+```typescript
+// ✓ Valid: path exists for GET
+await client.get("/organizations/:id", { id: "org-123" });
+
+// ✗ Type error: path doesn't exist
+await client.get("/nonexistent/path", {});
+
+// ✗ Type error: path exists but not for POST
+await client.post("/health", {});
+```
+
+### Request Body Validation
+
+```typescript
+// ✓ Valid: correct body structure
+await client.post("/organizations/:organizationId/events", {
+  name: "Summer Festival",
+  startDate: "2024-07-15",
+  endDate: "2024-07-17"
+}, {
+  organizationId: "org-123"
+});
+
+// ✗ Type error: missing required fields
+await client.post("/organizations/:organizationId/events", {
+  name: "Festival"
+}, {
+  organizationId: "org-123"
+});
+
+// ✗ Type error: invalid field type
+await client.post("/organizations/:organizationId/events", {
+  name: 123, // Should be string
+  startDate: "2024-07-15",
+  endDate: "2024-07-17"
+}, {
+  organizationId: "org-123"
+});
+```
+
+### Response Type Inference
+
+```typescript
+// Response type is automatically inferred as Organization
+const organization = await client.get("/organizations/:id", {
+  id: "org-123"
+});
+
+// TypeScript knows the structure of organization
+console.log(organization.name); // ✓ Valid
+console.log(organization.invalidField); // ✗ Type error
+```
+
+### Generic Helper Functions
+
+```typescript
+async function getResource<P extends PathsFor<"GET">>(
+  path: P,
+  query: Query<P>
+): Promise<ResponseFor<"GET", P>> {
+  return client.get(path, query);
+}
+
+// Fully type-safe
+const org = await getResource("/organizations/:id", { id: "org-123" });
+const user = await getResource("/users/:id", { id: "user-456" });
+```
+
+## Benefits
+
+1. **Type Safety**: Catch errors at compile-time instead of runtime
+2. **IntelliSense**: Auto-completion for paths, body fields, and response properties
+3. **Refactoring**: Rename fields across the entire codebase safely
+4. **Documentation**: Types serve as inline documentation
+5. **Confidence**: Make changes knowing TypeScript will catch breaking changes

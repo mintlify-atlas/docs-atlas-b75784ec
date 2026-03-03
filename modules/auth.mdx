@@ -1,0 +1,260 @@
+---
+title: 'Authentication'
+description: 'Handle user authentication, sign-in, sign-up, and OAuth2 flows'
+icon: 'shield-halved'
+---
+
+The Auth module provides comprehensive authentication methods including email/password authentication, OAuth2 providers, and account recovery.
+
+## Authentication Methods
+
+### signIn
+
+Sign in a user with email and password.
+
+```typescript
+const result = await tonightpass.auth.signIn({
+  email: 'user@example.com',
+  password: 'securePassword123',
+});
+```
+
+<ParamField path="data" type="SignInUserDto" required>
+  <Expandable title="SignInUserDto properties">
+    <ParamField path="email" type="string" required>
+      User's email address
+    </ParamField>
+    <ParamField path="password" type="string" required>
+      User's password
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+**Returns:** `Promise<AuthResponse>`
+
+---
+
+### signUp
+
+Register a new user account.
+
+```typescript
+const result = await tonightpass.auth.signUp({
+  email: 'user@example.com',
+  password: 'securePassword123',
+  username: 'johndoe',
+  // ... other registration fields
+});
+```
+
+<ParamField path="data" type="CreateUserDto" required>
+  The registration data for the new user
+</ParamField>
+
+**Returns:** `Promise<AuthResponse>`
+
+---
+
+### signOut
+
+Sign out the current user.
+
+```typescript
+await tonightpass.auth.signOut();
+```
+
+**Returns:** `Promise<void>`
+
+---
+
+### refreshToken
+
+Refresh the authentication token.
+
+```typescript
+const refreshed = await tonightpass.auth.refreshToken();
+```
+
+**Returns:** `Promise<AuthResponse>`
+
+## Password Recovery
+
+### recovery
+
+Initiate password recovery process by sending a recovery email.
+
+```typescript
+await tonightpass.auth.recovery({
+  email: 'user@example.com',
+});
+```
+
+<ParamField path="data" type="RecoveryDto" required>
+  <Expandable title="RecoveryDto properties">
+    <ParamField path="email" type="string" required>
+      Email address to send recovery instructions to
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+**Returns:** `Promise<void>`
+
+---
+
+### recoveryReset
+
+Reset password using recovery token.
+
+```typescript
+await tonightpass.auth.recoveryReset({
+  token: 'recovery-token-from-email',
+  password: 'newSecurePassword123',
+});
+```
+
+<ParamField path="data" type="RecoveryResetDto" required>
+  <Expandable title="RecoveryResetDto properties">
+    <ParamField path="token" type="string" required>
+      Recovery token from email
+    </ParamField>
+    <ParamField path="password" type="string" required>
+      New password
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+**Returns:** `Promise<void>`
+
+## OAuth2 Integration
+
+### oauth2.connect
+
+Generate OAuth2 connection URL for a provider.
+
+```typescript
+const authUrl = tonightpass.auth.oauth2.connect('google', {
+  redirect_uri: 'https://yourapp.com/callback',
+});
+
+// Redirect user to authUrl
+window.location.href = authUrl;
+```
+
+<ParamField path="provider" type="OAuth2Provider" required>
+  The OAuth2 provider (e.g., 'google', 'facebook', 'github')
+</ParamField>
+
+<ParamField path="params" type="Record<string, ParamValue>">
+  Additional parameters like redirect_uri, state, etc.
+</ParamField>
+
+**Returns:** `string` - The OAuth2 authorization URL
+
+---
+
+### oauth2.disconnect
+
+Disconnect an OAuth2 provider from the user's account.
+
+```typescript
+await tonightpass.auth.oauth2.disconnect('google');
+```
+
+<ParamField path="provider" type="OAuth2Provider" required>
+  The OAuth2 provider to disconnect
+</ParamField>
+
+**Returns:** `Promise<void>`
+
+---
+
+### oauth2.googleOneTap
+
+Authenticate using Google One Tap.
+
+```typescript
+await tonightpass.auth.oauth2.googleOneTap({
+  credential: 'google-one-tap-credential',
+});
+```
+
+<ParamField path="data" type="GoogleOneTapDto" required>
+  <Expandable title="GoogleOneTapDto properties">
+    <ParamField path="credential" type="string" required>
+      The credential token from Google One Tap
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+**Returns:** `Promise<AuthResponse>`
+
+## Usage Examples
+
+<CodeGroup>
+```typescript Sign In/Sign Up
+import { TonightPass } from '@tonightpass/sdk';
+
+const tonightpass = new TonightPass();
+
+// Sign up a new user
+const signUpResult = await tonightpass.auth.signUp({
+  email: 'user@example.com',
+  password: 'SecurePass123!',
+  username: 'johndoe',
+  firstName: 'John',
+  lastName: 'Doe',
+});
+
+// Sign in existing user
+const signInResult = await tonightpass.auth.signIn({
+  email: 'user@example.com',
+  password: 'SecurePass123!',
+});
+
+console.log('Authenticated:', signInResult);
+```
+
+```typescript OAuth2 Flow
+import { TonightPass } from '@tonightpass/sdk';
+
+const tonightpass = new TonightPass();
+
+// Generate OAuth2 URL and redirect
+const googleAuthUrl = tonightpass.auth.oauth2.connect('google', {
+  redirect_uri: 'https://yourapp.com/auth/callback',
+  state: 'random-state-string',
+});
+
+window.location.href = googleAuthUrl;
+
+// Later, disconnect the provider
+await tonightpass.auth.oauth2.disconnect('google');
+```
+
+```typescript Password Recovery
+import { TonightPass } from '@tonightpass/sdk';
+
+const tonightpass = new TonightPass();
+
+// Request password recovery
+await tonightpass.auth.recovery({
+  email: 'user@example.com',
+});
+
+// Reset password with token from email
+await tonightpass.auth.recoveryReset({
+  token: 'recovery-token-from-email',
+  password: 'NewSecurePass123!',
+});
+```
+</CodeGroup>
+
+## Security Best Practices
+
+<Warning>
+  - Always use HTTPS in production
+  - Implement CSRF protection for OAuth2 flows using the state parameter
+  - Store tokens securely (HttpOnly cookies recommended)
+  - Never expose API keys or secrets in client-side code
+  - Implement rate limiting on authentication endpoints
+</Warning>

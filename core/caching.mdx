@@ -1,0 +1,535 @@
+---
+title: 'Caching'
+description: 'Cache API responses for improved performance'
+icon: 'database'
+---
+
+The Tonight Pass SDK includes built-in caching to reduce API calls and improve application performance.
+
+## CacheOptions
+
+Configure caching with `CacheOptions`:
+
+```typescript
+// From packages/node/src/rest/cache.ts
+export type CacheOptions = {
+  enabled: boolean;
+  ttl?: number;
+  methods?: Options["method"][];
+};
+```
+
+<ParamField path="enabled" type="boolean" required>
+  Enable or disable caching
+</ParamField>
+
+<ParamField path="ttl" type="number" default={60000}>
+  Time to live in milliseconds. Default is 60,000ms (1 minute).
+</ParamField>
+
+<ParamField path="methods" type="string[]" default={["GET"]}>
+  HTTP methods to cache. Default is `["GET"]`.
+</ParamField>
+
+## Enabling Caching
+
+Enable caching when creating the client:
+
+<CodeGroup>
+
+```typescript Basic
+import { TonightPass } from '@tonightpass/node';
+
+const tonightpass = new TonightPass({
+  baseURL: 'https://api.tonightpass.com',
+  apiKey: process.env.TONIGHTPASS_API_KEY!,
+  cache: {
+    enabled: true
+  }
+});
+```
+
+```typescript Custom TTL
+import { TonightPass } from '@tonightpass/node';
+
+const tonightpass = new TonightPass({
+  baseURL: 'https://api.tonightpass.com',
+  apiKey: process.env.TONIGHTPASS_API_KEY!,
+  cache: {
+    enabled: true,
+    ttl: 300000  // 5 minutes
+  }
+});
+```
+
+```typescript Multiple Methods
+import { TonightPass } from '@tonightpass/node';
+
+const tonightpass = new TonightPass({
+  baseURL: 'https://api.tonightpass.com',
+  apiKey: process.env.TONIGHTPASS_API_KEY!,
+  cache: {
+    enabled: true,
+    ttl: 60000,
+    methods: ['GET', 'POST']  // Cache GET and POST requests
+  }
+});
+```
+
+</CodeGroup>
+
+## How Caching Works
+
+The cache stores responses based on HTTP method and URL:
+
+```typescript
+// From packages/node/src/rest/cache.ts
+private generateKey(method: Options["method"], url: string): string {
+  return `${method}:${url}`;
+}
+```
+
+Example cache keys:
+- `GET:https://api.tonightpass.com/v1/events/event-123`
+- `GET:https://api.tonightpass.com/v1/organizations/org-456/events?limit=10`
+
+### Cache Flow
+
+<Steps>
+  <Step title="Request Made">
+    A request is made using the client (e.g., `client.get()`)
+  </Step>
+  
+  <Step title="Check Cache">
+    The cache manager checks if a valid cached response exists for the method and URL
+  </Step>
+  
+  <Step title="Return Cached or Fetch">
+    If a valid cache entry exists, it's returned immediately. Otherwise, the request is sent to the API.
+  </Step>
+  
+  <Step title="Store Response">
+    After a successful API response, the data is stored in the cache with a timestamp.
+  </Step>
+</Steps>
+
+## CacheManager Class
+
+The internal cache manager handles all caching operations:
+
+```typescript
+// From packages/node/src/rest/cache.ts
+export class CacheManager {
+  private readonly cache: Map<string, CacheEntry<unknown>> = new Map();
+  private readonly options: Required<CacheOptions>;
+
+  constructor(options: CacheOptions) {
+    this.options = {
+      enabled: options.enabled,
+      ttl: options.ttl ?? 60_000,
+      methods: options.methods ?? ["GET"],
+    };
+  }
+
+  get<T>(method: Options["method"], url: string): T | null
+  set<T>(method: Options["method"], url: string, data: T): void
+  clear(): void
+  stats(): { size: number; keys: string[] }
+}
+```
+
+### Cache Entry
+
+```typescript
+// From packages/node/src/rest/cache.ts
+export type CacheEntry<T> = {
+  data: T;
+  timestamp: number;
+};
+```
+
+## Cache Methods
+
+### Get Cached Data
+
+Retrieve cached data (used internally):
+
+```typescript
+get<T>(method: Options["method"], url: string): T | null
+```
+
+Returns `null` if:
+- Caching is disabled for the method
+- No cached entry exists
+- The cached entry has expired (older than TTL)
+
+### Set Cached Data
+
+Store data in the cache (used internally):
+
+```typescript
+set<T>(method: Options["method"], url: string, data: T): void
+```
+
+Only stores data if caching is enabled for the HTTP method.
+
+### Clear Cache
+
+Clear all cached entries:
+
+```typescript
+tonightpass.client.clearCache();
+```
+
+<CodeGroup>
+
+```typescript Manual Clear
+// Clear cache after data mutation
+await tonightpass.organizations.events.update({
+  organizationId: 'org-123',
+  id: 'event-456',
+  title: 'Updated Title'
+});
+
+// Clear cache so next GET fetches fresh data
+tonightpass.client.clearCache();
+```
+
+```typescript Periodic Clear
+// Clear cache every hour
+setInterval(() => {
+  tonightpass.client.clearCache();
+  console.log('Cache cleared');
+}, 3600000);
+```
+
+</CodeGroup>
+
+### Get Cache Statistics
+
+Retrieve cache statistics:
+
+```typescript
+const stats = tonightpass.client.getCacheStats();
+console.log(`Cached entries: ${stats.size}`);
+console.log(`Cache keys:`, stats.keys);
+```
+
+Returns:
+```typescript
+{
+  size: number;      // Number of cached entries
+  keys: string[];    // Array of cache keys
+}
+```
+
+<CodeGroup>
+
+```typescript Monitor Cache
+const stats = tonightpass.client.getCacheStats();
+
+console.log(`Cache size: ${stats.size}`);
+
+// Example output:
+// Cache size: 3
+// Keys:
+//   GET:https://api.tonightpass.com/v1/events/event-123
+//   GET:https://api.tonightpass.com/v1/organizations/org-456
+//   GET:https://api.tonightpass.com/v1/users/me
+
+stats.keys.forEach(key => console.log(`  ${key}`));
+```
+
+```typescript Cache Hit Ratio
+let cacheHits = 0;
+let cacheMisses = 0;
+
+function trackCacheUsage() {
+  const beforeSize = tonightpass.client.getCacheStats()?.size ?? 0;
+  
+  // Make request
+  await tonightpass.organizations.events.list({ organizationId: 'org-123' });
+  
+  const afterSize = tonightpass.client.getCacheStats()?.size ?? 0;
+  
+  if (afterSize > beforeSize) {
+    cacheMisses++;
+  } else {
+    cacheHits++;
+  }
+  
+  const hitRatio = cacheHits / (cacheHits + cacheMisses);
+  console.log(`Cache hit ratio: ${(hitRatio * 100).toFixed(2)}%`);
+}
+```
+
+</CodeGroup>
+
+## Cache Validation
+
+Cached entries are automatically validated based on TTL:
+
+```typescript
+// From packages/node/src/rest/cache.ts
+private isValid(entry: CacheEntry<unknown>): boolean {
+  const age = Date.now() - entry.timestamp;
+  return age < this.options.ttl;
+}
+```
+
+Expired entries are automatically removed when accessed:
+
+```typescript
+if (!this.isValid(entry)) {
+  this.cache.delete(key);
+  return null;
+}
+```
+
+## Use Cases
+
+### Read-Heavy Applications
+
+For applications that frequently read the same data:
+
+```typescript
+const tonightpass = new TonightPass({
+  baseURL: 'https://api.tonightpass.com',
+  apiKey: process.env.TONIGHTPASS_API_KEY!,
+  cache: {
+    enabled: true,
+    ttl: 300000  // 5 minutes for frequently accessed data
+  }
+});
+
+// First call hits the API
+const events1 = await tonightpass.organizations.events.list({
+  organizationId: 'org-123'
+});
+
+// Second call within 5 minutes returns cached data
+const events2 = await tonightpass.organizations.events.list({
+  organizationId: 'org-123'
+});
+```
+
+### Public Data
+
+Cache public data that rarely changes:
+
+```typescript
+const tonightpass = new TonightPass({
+  baseURL: 'https://api.tonightpass.com',
+  apiKey: process.env.TONIGHTPASS_API_KEY!,
+  cache: {
+    enabled: true,
+    ttl: 3600000  // 1 hour for public data
+  }
+});
+
+// Cache public event listings
+const publicEvents = await tonightpass.organizations.events.list({
+  organizationId: 'org-123',
+  visibility: 'public'
+});
+```
+
+### User Sessions
+
+Cache user data during a session:
+
+```typescript
+const tonightpass = new TonightPass({
+  baseURL: 'https://api.tonightpass.com',
+  apiKey: process.env.TONIGHTPASS_API_KEY!,
+  accessToken: userToken,
+  cache: {
+    enabled: true,
+    ttl: 600000  // 10 minutes for user session
+  }
+});
+
+// User profile is cached
+const profile = await tonightpass.users.me();
+
+// Clear cache when user updates profile
+await tonightpass.users.update({ displayName: 'New Name' });
+tonightpass.client.clearCache();
+```
+
+### Development vs Production
+
+Different cache strategies for different environments:
+
+```typescript
+const isDev = process.env.NODE_ENV === 'development';
+
+const tonightpass = new TonightPass({
+  baseURL: process.env.TONIGHTPASS_API_URL!,
+  apiKey: process.env.TONIGHTPASS_API_KEY!,
+  cache: {
+    enabled: !isDev,  // Disable caching in development
+    ttl: isDev ? 10000 : 300000  // Shorter TTL in dev
+  }
+});
+```
+
+## Cache Invalidation
+
+### Manual Invalidation
+
+Clear cache after mutations:
+
+```typescript
+// Create new event
+await tonightpass.organizations.events.create({
+  organizationId: 'org-123',
+  title: 'New Event',
+  // ...
+});
+
+// Clear cache to ensure fresh data on next GET
+tonightpass.client.clearCache();
+
+// Next request fetches fresh data
+const events = await tonightpass.organizations.events.list({
+  organizationId: 'org-123'
+});
+```
+
+### Automatic Invalidation
+
+Implement automatic invalidation wrapper:
+
+```typescript
+async function withCacheInvalidation<T>(
+  operation: () => Promise<T>
+): Promise<T> {
+  const result = await operation();
+  tonightpass.client.clearCache();
+  return result;
+}
+
+// Usage
+await withCacheInvalidation(() =>
+  tonightpass.organizations.events.update({
+    organizationId: 'org-123',
+    id: 'event-456',
+    title: 'Updated Title'
+  })
+);
+```
+
+### Selective Invalidation
+
+The cache doesn't support selective invalidation by pattern. For fine-grained control, you'll need to implement your own caching layer or clear the entire cache.
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Cache Read Operations Only" icon="book-open">
+    Only cache GET requests by default:
+
+    ```typescript
+    // ✓ Good - Cache GET requests
+    cache: {
+      enabled: true,
+      methods: ['GET']
+    }
+
+    // ✗ Bad - Caching POST/PUT/DELETE is usually not useful
+    cache: {
+      enabled: true,
+      methods: ['GET', 'POST', 'PUT', 'DELETE']
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Choose Appropriate TTL" icon="clock">
+    Set TTL based on how frequently data changes:
+
+    ```typescript
+    // Public events (rarely change)
+    ttl: 3600000  // 1 hour
+
+    // User profile (changes occasionally)
+    ttl: 600000  // 10 minutes
+
+    // Real-time data (changes frequently)
+    ttl: 10000  // 10 seconds or disable caching
+    ```
+  </Accordion>
+
+  <Accordion title="Clear Cache After Mutations" icon="trash">
+    Always clear cache after creating, updating, or deleting data:
+
+    ```typescript
+    // Update event
+    await tonightpass.organizations.events.update({
+      organizationId: 'org-123',
+      id: 'event-456',
+      title: 'New Title'
+    });
+
+    // Clear cache
+    tonightpass.client.clearCache();
+    ```
+  </Accordion>
+
+  <Accordion title="Monitor Cache Performance" icon="chart-line">
+    Monitor cache statistics to optimize settings:
+
+    ```typescript
+    setInterval(() => {
+      const stats = tonightpass.client.getCacheStats();
+      console.log(`Cache size: ${stats.size}`);
+      
+      if (stats.size > 1000) {
+        console.warn('Cache growing too large, consider reducing TTL');
+      }
+    }, 60000);
+    ```
+  </Accordion>
+
+  <Accordion title="Disable in Development" icon="code">
+    Disable caching in development to always fetch fresh data:
+
+    ```typescript
+    cache: {
+      enabled: process.env.NODE_ENV === 'production',
+      ttl: 60000
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Limitations
+
+<Warning>
+  The cache is stored in memory and will be lost when the application restarts. For persistent caching, implement your own caching layer using Redis or similar.
+</Warning>
+
+<Note>
+  The cache is per-client instance. If you create multiple client instances, each will have its own separate cache.
+</Note>
+
+<Note>
+  There is no maximum cache size limit. For long-running applications with many unique requests, consider implementing periodic cache clearing or a maximum size limit.
+</Note>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Client" icon="globe" href="/core/client">
+    Learn more about the Client class
+  </Card>
+  <Card title="Error Handling" icon="triangle-exclamation" href="/core/error-handling">
+    Handle API errors properly
+  </Card>
+  <Card title="API Reference" icon="book" href="/api/client">
+    Explore API endpoints
+  </Card>
+  <Card title="SDK Modules" icon="puzzle-piece" href="/modules/health">
+    Explore all SDK modules
+  </Card>
+</CardGroup>

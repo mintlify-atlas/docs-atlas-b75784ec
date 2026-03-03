@@ -1,122 +1,102 @@
 {
   "$schema": "https://mintlify.com/docs.json",
+  "name": "Tonight Pass SDK",
   "theme": "mint",
-  "name": "Mint Starter Kit",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#7C3AED",
+    "light": "#A78BFA",
+    "dark": "#5B21B6"
   },
-  "favicon": "/favicon.svg",
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/tonightpass/tonightpass"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/tonightpass/tonightpass"
+    }
+  },
   "navigation": {
     "tabs": [
       {
-        "tab": "Guides",
+        "tab": "Documentation",
         "groups": [
           {
-            "group": "Getting started",
+            "group": "Get Started",
             "pages": [
-              "index",
-              "quickstart",
-              "development"
+              "introduction",
+              "installation",
+              "quickstart"
             ]
           },
           {
-            "group": "Customization",
+            "group": "Core SDK",
             "pages": [
-              "essentials/settings",
-              "essentials/navigation"
+              "core/client",
+              "core/authentication",
+              "core/error-handling",
+              "core/caching"
             ]
           },
           {
-            "group": "Writing content",
+            "group": "SDK Modules",
             "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/reusable-snippets"
+              "modules/api-keys",
+              "modules/auth",
+              "modules/channels",
+              "modules/currencies",
+              "modules/feed",
+              "modules/health",
+              "modules/notifications",
+              "modules/orders",
+              "modules/organizations",
+              "modules/profiles",
+              "modules/roadmap",
+              "modules/users"
             ]
           },
           {
-            "group": "AI tools",
+            "group": "Framework Integration",
             "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
+              "frameworks/react",
+              "frameworks/nestjs",
+              "frameworks/mailjet"
+            ]
+          },
+          {
+            "group": "Advanced",
+            "pages": [
+              "advanced/typescript",
+              "advanced/websocket",
+              "advanced/migration"
             ]
           }
         ]
       },
       {
-        "tab": "API reference",
+        "tab": "API Reference",
         "groups": [
           {
-            "group": "API documentation",
+            "group": "REST Client",
             "pages": [
-              "api-reference/introduction"
+              "api/client",
+              "api/endpoints",
+              "api/types"
             ]
           },
           {
-            "group": "Endpoint examples",
+            "group": "DTOs",
             "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
+              "api/dtos/api-keys",
+              "api/dtos/channels",
+              "api/dtos/organizations",
+              "api/dtos/users"
             ]
           }
         ]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
-  },
-  "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
-  },
-  "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
-      }
-    ],
-    "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
-    }
-  },
-  "contextual": {
-    "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
-  },
-  "footer": {
-    "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
-    }
+    ]
   }
 }

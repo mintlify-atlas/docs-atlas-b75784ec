@@ -1,0 +1,453 @@
+---
+title: "Client"
+description: "REST API client for Tonight Pass SDK"
+---
+
+## Client Class
+
+The `Client` class provides a low-level REST API client with type-safe HTTP methods and built-in caching support.
+
+```typescript
+import { Client } from '@tonightpass/node';
+
+const client = new Client({
+  baseURL: 'https://api.tonightpass.com',
+  apiKey: 'your-api-key',
+  cache: { enabled: true }
+});
+```
+
+## Constructor
+
+<ParamField path="options" type="ClientOptions" required>
+  Configuration options for the client
+  
+  <Expandable title="ClientOptions properties">
+    <ParamField path="baseURL" type="string" required>
+      The base URL for the API (e.g., `https://api.tonightpass.com`)
+    </ParamField>
+    
+    <ParamField path="apiKey" type="string">
+      API key for authentication. Used with `X-API-Key` header
+    </ParamField>
+    
+    <ParamField path="accessToken" type="string">
+      OAuth access token for authentication. Used with `Authorization: Bearer` header
+    </ParamField>
+    
+    <ParamField path="cache" type="CacheOptions">
+      Cache configuration options
+      
+      <Expandable title="CacheOptions properties">
+        <ParamField path="enabled" type="boolean" required>
+          Enable or disable caching
+        </ParamField>
+        
+        <ParamField path="ttl" type="number" default={60000}>
+          Time-to-live for cache entries in milliseconds
+        </ParamField>
+        
+        <ParamField path="methods" type="string[]" default={["GET"]}>
+          HTTP methods to cache (e.g., `["GET", "POST"]`)
+        </ParamField>
+      </Expandable>
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Properties
+
+### url
+
+```typescript
+client.url(path: string, params: Record<string, ParamValue>): string
+```
+
+Generates a fully-qualified URL by combining the base URL with a path and parameters.
+
+<ParamField path="path" type="string" required>
+  The API path (e.g., `/organizations/:id`)
+</ParamField>
+
+<ParamField path="params" type="Record<string, ParamValue>" required>
+  Path parameters to interpolate (e.g., `{ id: '123' }`)
+</ParamField>
+
+<ResponseField name="return" type="string">
+  The fully-qualified URL
+</ResponseField>
+
+## Methods
+
+### get
+
+Performs a GET request to the specified endpoint.
+
+```typescript
+async get<Path extends PathsFor<"GET">>(
+  path: Path,
+  query?: Query<Path>,
+  options?: APIRequestOptions
+): Promise<ResponseFor<"GET", Path>>
+```
+
+<ParamField path="path" type="PathsFor<'GET'>" required>
+  The API endpoint path. Must be a valid GET endpoint from the API
+</ParamField>
+
+<ParamField path="query" type="Query<Path>">
+  Query parameters as key-value pairs
+</ParamField>
+
+<ParamField path="options" type="APIRequestOptions">
+  Additional request options (headers, timeout, etc.)
+</ParamField>
+
+<ResponseField name="return" type="Promise<ResponseFor<'GET', Path>>">
+  Returns the typed response data for the endpoint
+</ResponseField>
+
+**Example:**
+
+```typescript
+const organization = await client.get('/organizations/:id', {
+  id: 'org-123'
+});
+```
+
+### post
+
+Performs a POST request to the specified endpoint.
+
+```typescript
+async post<Path extends PathsFor<"POST">>(
+  path: Path,
+  body: Body<"POST", Path>,
+  query?: Query<Path>,
+  options?: APIRequestOptions
+): Promise<ResponseFor<"POST", Path>>
+```
+
+<ParamField path="path" type="PathsFor<'POST'>" required>
+  The API endpoint path. Must be a valid POST endpoint from the API
+</ParamField>
+
+<ParamField path="body" type="Body<'POST', Path>" required>
+  The request body. Type is inferred from the endpoint
+</ParamField>
+
+<ParamField path="query" type="Query<Path>">
+  Query parameters as key-value pairs
+</ParamField>
+
+<ParamField path="options" type="APIRequestOptions">
+  Additional request options
+</ParamField>
+
+<ResponseField name="return" type="Promise<ResponseFor<'POST', Path>>">
+  Returns the typed response data for the endpoint
+</ResponseField>
+
+**Example:**
+
+```typescript
+const newEvent = await client.post('/organizations/:organizationId/events', {
+  name: 'Summer Festival',
+  startDate: '2024-07-15',
+  endDate: '2024-07-17'
+}, {
+  organizationId: 'org-123'
+});
+```
+
+### put
+
+Performs a PUT request to the specified endpoint.
+
+```typescript
+async put<Path extends PathsFor<"PUT">>(
+  path: Path,
+  body: Body<"PUT", Path>,
+  query?: Query<Path>,
+  options?: APIRequestOptions
+): Promise<ResponseFor<"PUT", Path>>
+```
+
+<ParamField path="path" type="PathsFor<'PUT'>" required>
+  The API endpoint path. Must be a valid PUT endpoint from the API
+</ParamField>
+
+<ParamField path="body" type="Body<'PUT', Path>" required>
+  The request body. Type is inferred from the endpoint
+</ParamField>
+
+<ParamField path="query" type="Query<Path>">
+  Query parameters as key-value pairs
+</ParamField>
+
+<ParamField path="options" type="APIRequestOptions">
+  Additional request options
+</ParamField>
+
+<ResponseField name="return" type="Promise<ResponseFor<'PUT', Path>>">
+  Returns the typed response data for the endpoint
+</ResponseField>
+
+### patch
+
+Performs a PATCH request to the specified endpoint.
+
+```typescript
+async patch<Path extends PathsFor<"PATCH">>(
+  path: Path,
+  body: Body<"PATCH", Path>,
+  query?: Query<Path>,
+  options?: APIRequestOptions
+): Promise<ResponseFor<"PATCH", Path>>
+```
+
+<ParamField path="path" type="PathsFor<'PATCH'>" required>
+  The API endpoint path. Must be a valid PATCH endpoint from the API
+</ParamField>
+
+<ParamField path="body" type="Body<'PATCH', Path>" required>
+  The request body. Type is inferred from the endpoint
+</ParamField>
+
+<ParamField path="query" type="Query<Path>">
+  Query parameters as key-value pairs
+</ParamField>
+
+<ParamField path="options" type="APIRequestOptions">
+  Additional request options
+</ParamField>
+
+<ResponseField name="return" type="Promise<ResponseFor<'PATCH', Path>>">
+  Returns the typed response data for the endpoint
+</ResponseField>
+
+**Example:**
+
+```typescript
+const updated = await client.patch('/organizations/:id', {
+  name: 'Updated Name'
+}, {
+  id: 'org-123'
+});
+```
+
+### delete
+
+Performs a DELETE request to the specified endpoint.
+
+```typescript
+async delete<Path extends PathsFor<"DELETE">>(
+  path: Path,
+  body: Body<"DELETE", Path>,
+  query?: Query<Path>,
+  options?: APIRequestOptions
+): Promise<ResponseFor<"DELETE", Path>>
+```
+
+<ParamField path="path" type="PathsFor<'DELETE'>" required>
+  The API endpoint path. Must be a valid DELETE endpoint from the API
+</ParamField>
+
+<ParamField path="body" type="Body<'DELETE', Path>" required>
+  The request body. Type is inferred from the endpoint
+</ParamField>
+
+<ParamField path="query" type="Query<Path>">
+  Query parameters as key-value pairs
+</ParamField>
+
+<ParamField path="options" type="APIRequestOptions">
+  Additional request options
+</ParamField>
+
+<ResponseField name="return" type="Promise<ResponseFor<'DELETE', Path>>">
+  Returns the typed response data for the endpoint
+</ResponseField>
+
+### setOptions
+
+Updates the client configuration.
+
+```typescript
+setOptions(options: ClientOptions): void
+```
+
+<ParamField path="options" type="ClientOptions" required>
+  New configuration options to apply
+</ParamField>
+
+**Example:**
+
+```typescript
+client.setOptions({
+  baseURL: 'https://api.tonightpass.com',
+  apiKey: 'new-api-key',
+  cache: { enabled: false }
+});
+```
+
+### setAccessToken
+
+Updates the access token used for authentication.
+
+```typescript
+setAccessToken(accessToken: string | undefined): void
+```
+
+<ParamField path="accessToken" type="string | undefined" required>
+  The new access token, or `undefined` to clear it
+</ParamField>
+
+**Example:**
+
+```typescript
+client.setAccessToken('new-token-123');
+```
+
+### clearCache
+
+Clears all cached responses.
+
+```typescript
+clearCache(): void
+```
+
+**Example:**
+
+```typescript
+client.clearCache();
+```
+
+### getCacheStats
+
+Returns statistics about the current cache state.
+
+```typescript
+getCacheStats(): { size: number; keys: string[] } | undefined
+```
+
+<ResponseField name="return" type="{ size: number; keys: string[] } | undefined">
+  Cache statistics object, or `undefined` if caching is disabled
+  
+  <Expandable title="properties">
+    <ResponseField name="size" type="number">
+      Number of entries in the cache
+    </ResponseField>
+    
+    <ResponseField name="keys" type="string[]">
+      Array of cache keys in the format `METHOD:URL`
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+**Example:**
+
+```typescript
+const stats = client.getCacheStats();
+console.log(`Cache has ${stats?.size} entries`);
+```
+
+## TonightPassAPIError
+
+Error class thrown when an API request fails.
+
+```typescript
+class TonightPassAPIError<T> extends Error {
+  public readonly status: number;
+  public readonly response: RedaxiosResponse<APIResponse<T>>;
+  public readonly data: ErroredAPIResponse;
+}
+```
+
+<ResponseField name="message" type="string">
+  The error message from the API
+</ResponseField>
+
+<ResponseField name="status" type="number">
+  HTTP status code
+</ResponseField>
+
+<ResponseField name="response" type="RedaxiosResponse<APIResponse<T>>">
+  The full HTTP response object
+</ResponseField>
+
+<ResponseField name="data" type="ErroredAPIResponse">
+  The error response data
+  
+  <Expandable title="ErroredAPIResponse properties">
+    <ResponseField name="success" type="false">
+      Always `false` for error responses
+    </ResponseField>
+    
+    <ResponseField name="message" type="string">
+      Error message
+    </ResponseField>
+    
+    <ResponseField name="statusCode" type="number">
+      HTTP status code
+    </ResponseField>
+    
+    <ResponseField name="errors" type="Record<string, string[]>">
+      Validation errors by field name (if applicable)
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+**Example:**
+
+```typescript
+try {
+  await client.get('/organizations/:id', { id: 'invalid' });
+} catch (error) {
+  if (error instanceof TonightPassAPIError) {
+    console.error(`Error ${error.status}: ${error.message}`);
+    if (error.data.errors) {
+      console.error('Validation errors:', error.data.errors);
+    }
+  }
+}
+```
+
+## APIRequestOptions
+
+Additional options that can be passed to HTTP methods.
+
+```typescript
+interface APIRequestOptions extends Options {
+  apiKey?: string;
+  accessToken?: string;
+}
+```
+
+<ParamField path="apiKey" type="string">
+  Override the client's API key for this request
+</ParamField>
+
+<ParamField path="accessToken" type="string">
+  Override the client's access token for this request
+</ParamField>
+
+<ParamField path="headers" type="Record<string, string>">
+  Additional HTTP headers
+</ParamField>
+
+<ParamField path="timeout" type="number">
+  Request timeout in milliseconds
+</ParamField>
+
+**Example:**
+
+```typescript
+const data = await client.get('/organizations/:id', 
+  { id: 'org-123' },
+  { 
+    headers: { 'X-Custom-Header': 'value' },
+    timeout: 5000
+  }
+);
+```

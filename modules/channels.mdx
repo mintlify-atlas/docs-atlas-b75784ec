@@ -1,0 +1,422 @@
+---
+title: 'Channels'
+description: 'Manage channels, participants, and channel messages'
+icon: 'messages'
+---
+
+The Channels module provides methods to create and manage communication channels for users and organizations, including participant management and messaging functionality.
+
+## Channel Management
+
+### me
+
+Get all channels for the authenticated user.
+
+```typescript
+const myChannels = await tonightpass.channels.me({
+  limit: 20,
+  offset: 0,
+});
+```
+
+<ParamField path="options" type="ArrayOptions<Channel>">
+  Pagination and filtering options
+</ParamField>
+
+**Returns:** `Promise<Channel[]>`
+
+---
+
+### getByOrganization
+
+Get all channels for a specific organization.
+
+```typescript
+const orgChannels = await tonightpass.channels.getByOrganization(
+  'my-organization',
+  { limit: 20 }
+);
+```
+
+<ParamField path="organizationSlug" type="string" required>
+  The organization's slug identifier
+</ParamField>
+
+<ParamField path="options" type="ArrayOptions<Channel>">
+  Pagination and filtering options
+</ParamField>
+
+**Returns:** `Promise<Channel[]>`
+
+---
+
+### countMe
+
+Count channels for the authenticated user.
+
+```typescript
+const count = await tonightpass.channels.countMe({
+  unread: true,
+});
+```
+
+<ParamField path="options" type="UserChannelCountOptions">
+  Filtering options for counting channels
+</ParamField>
+
+**Returns:** `Promise<number>`
+
+---
+
+### countByOrganization
+
+Count channels for an organization.
+
+```typescript
+const count = await tonightpass.channels.countByOrganization(
+  'my-organization'
+);
+```
+
+<ParamField path="organizationSlug" type="string" required>
+  The organization's slug identifier
+</ParamField>
+
+<ParamField path="options" type="UserChannelCountOptions">
+  Filtering options
+</ParamField>
+
+**Returns:** `Promise<number>`
+
+---
+
+### get
+
+Get a specific channel by ID for the authenticated user.
+
+```typescript
+const channel = await tonightpass.channels.get(channelId);
+```
+
+<ParamField path="channelId" type="string" required>
+  The channel's unique identifier
+</ParamField>
+
+**Returns:** `Promise<Channel>`
+
+---
+
+### getByOrganizationChannel
+
+Get a specific channel by organization and channel ID.
+
+```typescript
+const channel = await tonightpass.channels.getByOrganizationChannel(
+  'my-organization',
+  channelId
+);
+```
+
+<ParamField path="organizationSlug" type="string" required>
+  The organization's slug identifier
+</ParamField>
+
+<ParamField path="channelId" type="string" required>
+  The channel's unique identifier
+</ParamField>
+
+**Returns:** `Promise<Channel>`
+
+---
+
+### create
+
+Create a new channel for the authenticated user.
+
+```typescript
+const newChannel = await tonightpass.channels.create({
+  name: 'Project Discussion',
+  description: 'Channel for project-related discussions',
+  type: 'private',
+});
+```
+
+<ParamField path="data" type="CreateChannelDto" required>
+  The data for creating a new channel
+</ParamField>
+
+**Returns:** `Promise<Channel>`
+
+---
+
+### createByOrganization
+
+Create a new channel for an organization.
+
+```typescript
+const newChannel = await tonightpass.channels.createByOrganization(
+  'my-organization',
+  {
+    name: 'Team Channel',
+    description: 'Internal team communications',
+  }
+);
+```
+
+<ParamField path="organizationSlug" type="string" required>
+  The organization's slug identifier
+</ParamField>
+
+<ParamField path="data" type="CreateChannelDto" required>
+  The data for creating a new channel
+</ParamField>
+
+**Returns:** `Promise<Channel>`
+
+---
+
+### update
+
+Update a channel.
+
+```typescript
+const updated = await tonightpass.channels.update(channelId, {
+  name: 'Updated Channel Name',
+});
+```
+
+<ParamField path="channelId" type="string" required>
+  The channel's unique identifier
+</ParamField>
+
+<ParamField path="data" type="UpdateChannelDto" required>
+  The data to update
+</ParamField>
+
+**Returns:** `Promise<Channel>`
+
+---
+
+### updateByOrganization
+
+Update an organization channel.
+
+```typescript
+const updated = await tonightpass.channels.updateByOrganization(
+  'my-organization',
+  channelId,
+  { name: 'Updated Name' }
+);
+```
+
+<ParamField path="organizationSlug" type="string" required>
+  The organization's slug identifier
+</ParamField>
+
+<ParamField path="channelId" type="string" required>
+  The channel's unique identifier
+</ParamField>
+
+<ParamField path="data" type="UpdateChannelDto" required>
+  The data to update
+</ParamField>
+
+**Returns:** `Promise<Channel>`
+
+---
+
+### delete
+
+Delete a channel.
+
+```typescript
+await tonightpass.channels.delete(channelId);
+```
+
+<ParamField path="channelId" type="string" required>
+  The channel's unique identifier
+</ParamField>
+
+**Returns:** `Promise<void>`
+
+---
+
+### deleteByOrganization
+
+Delete an organization channel.
+
+```typescript
+await tonightpass.channels.deleteByOrganization(
+  'my-organization',
+  channelId
+);
+```
+
+<ParamField path="organizationSlug" type="string" required>
+  The organization's slug identifier
+</ParamField>
+
+<ParamField path="channelId" type="string" required>
+  The channel's unique identifier
+</ParamField>
+
+**Returns:** `Promise<void>`
+
+## Participant Management
+
+### addParticipant
+
+Add a participant to a channel.
+
+```typescript
+await tonightpass.channels.addParticipant(channelId, {
+  username: 'johndoe',
+  role: 'member',
+});
+```
+
+<ParamField path="channelId" type="string" required>
+  The channel's unique identifier
+</ParamField>
+
+<ParamField path="data" type="AddParticipantDto" required>
+  The participant data
+</ParamField>
+
+**Returns:** `Promise<void>`
+
+---
+
+### addParticipantByOrganization
+
+Add a participant to an organization channel.
+
+```typescript
+await tonightpass.channels.addParticipantByOrganization(
+  'my-organization',
+  channelId,
+  { username: 'johndoe' }
+);
+```
+
+---
+
+### removeParticipant
+
+Remove a participant from a channel.
+
+```typescript
+await tonightpass.channels.removeParticipant(channelId, 'johndoe');
+```
+
+<ParamField path="channelId" type="string" required>
+  The channel's unique identifier
+</ParamField>
+
+<ParamField path="username" type="string" required>
+  The username of the participant to remove
+</ParamField>
+
+**Returns:** `Promise<void>`
+
+---
+
+### removeParticipantByOrganization
+
+Remove a participant from an organization channel.
+
+```typescript
+await tonightpass.channels.removeParticipantByOrganization(
+  'my-organization',
+  channelId,
+  'johndoe'
+);
+```
+
+---
+
+### getMembers
+
+Get all members of a channel.
+
+```typescript
+const members = await tonightpass.channels.getMembers(channelId, {
+  limit: 50,
+});
+```
+
+<ParamField path="channelId" type="string" required>
+  The channel's unique identifier
+</ParamField>
+
+<ParamField path="options" type="ArrayOptions<ChannelMember>">
+  Pagination options
+</ParamField>
+
+**Returns:** `Promise<ChannelMember[]>`
+
+---
+
+### getMembersByOrganization
+
+Get all members of an organization channel.
+
+```typescript
+const members = await tonightpass.channels.getMembersByOrganization(
+  'my-organization',
+  channelId
+);
+```
+
+## Messages
+
+The channels module includes a `messages` submodule for managing channel messages, including creating, updating, deleting messages, and managing reactions.
+
+```typescript
+// Access channel messages
+const messages = await tonightpass.channels.messages.getAll(channelId);
+```
+
+## Usage Example
+
+<CodeGroup>
+```typescript Complete Channel Workflow
+import { TonightPass } from '@tonightpass/sdk';
+
+const tonightpass = new TonightPass({
+  apiKey: process.env.TONIGHTPASS_API_KEY,
+});
+
+// Create a new channel
+const channel = await tonightpass.channels.create({
+  name: 'Project Alpha',
+  description: 'Discussions about Project Alpha',
+  type: 'private',
+});
+
+// Add participants
+await tonightpass.channels.addParticipant(channel.id, {
+  username: 'alice',
+});
+
+await tonightpass.channels.addParticipant(channel.id, {
+  username: 'bob',
+});
+
+// Get channel members
+const members = await tonightpass.channels.getMembers(channel.id);
+console.log(`Channel has ${members.length} members`);
+
+// Send a message
+await tonightpass.channels.messages.create(channel.id, {
+  content: 'Welcome to the channel!',
+});
+
+// Get all messages
+const messages = await tonightpass.channels.messages.getAll(channel.id);
+```
+</CodeGroup>
+
+<Note>
+  Channels support both user-owned and organization-owned contexts. Use the appropriate methods based on your use case.
+</Note>

@@ -1,0 +1,376 @@
+---
+title: "TypeScript Support"
+description: "Advanced TypeScript features and type safety in Tonight Pass SDK"
+icon: "code"
+---
+
+The Tonight Pass SDK is built with TypeScript-first design, providing comprehensive type safety and excellent developer experience with full IntelliSense support.
+
+## Type Safety
+
+The SDK uses advanced TypeScript features to ensure type safety across all API calls:
+
+<CodeGroup>
+```typescript Node.js
+import { TonightPass } from "tonightpass";
+
+const tnp = new TonightPass({
+  baseURL: "https://api.tonightpass.com",
+  apiKey: "your-api-key"
+});
+
+// TypeScript infers the response type automatically
+const user = await tnp.users.get("username");
+// user is typed as User
+```
+
+```typescript React
+import { useUser } from "tonightpass/react";
+
+function UserProfile() {
+  const { data: user, error, isLoading } = useUser("username");
+  // user is typed as User | undefined
+  
+  if (isLoading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  
+  return <div>{user?.identity.fullName}</div>;
+}
+```
+</CodeGroup>
+
+## Core Types
+
+### API Response Types
+
+All API responses follow a consistent structure:
+
+```typescript packages/node/src/rest/client.ts
+export type SuccessfulAPIResponse<T> = {
+  success: true;
+  data: T;
+};
+
+export type ErroredAPIResponse = {
+  success: false;
+  message: string;
+  statusCode: number;
+  errors?: {
+    [key: string]: string[];
+  };
+};
+
+export type APIResponse<T> = SuccessfulAPIResponse<T> | ErroredAPIResponse;
+```
+
+<Note>
+  The SDK automatically throws `TonightPassAPIError` for failed requests, so you only need to handle successful responses in your code.
+</Note>
+
+### Generic Type Helpers
+
+The SDK exports several utility types for working with API endpoints:
+
+<Accordion title="PathsFor<Method>" icon="route">
+  Extract all valid paths for a specific HTTP method:
+
+  ```typescript packages/node/src/rest/client.ts
+  export type PathsFor<M extends Options["method"]> = Extract<
+    Endpoints,
+    { method: M }
+  >["path"];
+  ```
+
+  **Usage:**
+  ```typescript
+  import type { PathsFor } from "tonightpass";
+
+  // Get all GET endpoint paths
+  type GetPaths = PathsFor<"GET">;
+  // "/users/@:username" | "/organizations/@:organizationSlug" | ...
+  ```
+</Accordion>
+
+<Accordion title="ResponseFor<Method, Path>" icon="arrow-turn-down-left">
+  Get the response type for a specific endpoint:
+
+  ```typescript packages/node/src/rest/client.ts
+  export type ResponseFor<
+    M extends Options["method"],
+    P extends PathsFor<M>,
+  > = Extract<Endpoints, { method: M; path: P }>["res"];
+  ```
+
+  **Usage:**
+  ```typescript
+  import type { ResponseFor } from "tonightpass";
+
+  type UserResponse = ResponseFor<"GET", "/users/@:username">;
+  // User
+  ```
+</Accordion>
+
+<Accordion title="Body<Method, Path>" icon="file-code">
+  Get the request body type for a specific endpoint:
+
+  ```typescript packages/node/src/rest/client.ts
+  export type Body<M extends Options["method"], P extends PathsFor<M>> = Extract<
+    Endpoints,
+    { method: M; path: P }
+  >["body"];
+  ```
+
+  **Usage:**
+  ```typescript
+  import type { Body } from "tonightpass";
+
+  type CreateUserBody = Body<"POST", "/users">;
+  // CreateUserDto
+  ```
+</Accordion>
+
+<Accordion title="Response<Method, Path>" icon="brackets-curly">
+  Get the full API response (including success/error wrapper):
+
+  ```typescript packages/node/src/rest/client.ts
+  export type Response<
+    M extends Options["method"],
+    P extends PathsFor<M>,
+  > = APIResponse<Extract<Endpoints, { method: M; path: P }>["res"]>;
+  ```
+</Accordion>
+
+## Type Inference
+
+The SDK client methods use generics to automatically infer types:
+
+<Tabs>
+  <Tab title="GET Requests">
+    ```typescript packages/node/src/rest/client.ts
+    async get<Path extends PathsFor<"GET">>(
+      path: Path,
+      query?: Query<Path>,
+      options?: APIRequestOptions
+    ) {
+      return this.requester<ResponseFor<"GET", Path>>(
+        "GET",
+        path,
+        undefined,
+        query,
+        options
+      );
+    }
+    ```
+
+    **Example:**
+    ```typescript
+    // TypeScript knows this returns a User
+    const user = await client.get("/users/@:username", { username: "john" });
+    ```
+  </Tab>
+
+  <Tab title="POST Requests">
+    ```typescript packages/node/src/rest/client.ts
+    async post<Path extends PathsFor<"POST">>(
+      path: Path,
+      body: Body<"POST", Path>,
+      query?: Query<Path>,
+      options?: APIRequestOptions
+    ) {
+      return this.requester<ResponseFor<"POST", Path>>(
+        "POST",
+        path,
+        body,
+        query,
+        options
+      );
+    }
+    ```
+
+    **Example:**
+    ```typescript
+    // TypeScript enforces the correct body structure
+    const event = await client.post("/organizations/@:organizationSlug/events", {
+      organizationSlug: "my-org"
+    }, {
+      name: "My Event",
+      slug: "my-event",
+      // ... other required fields
+    });
+    ```
+  </Tab>
+
+  <Tab title="PUT/PATCH Requests">
+    ```typescript packages/node/src/rest/client.ts
+    async put<Path extends PathsFor<"PUT">>(
+      path: Path,
+      body: Body<"PUT", Path>,
+      query?: Query<Path>,
+      options?: APIRequestOptions
+    ) {
+      return this.requester<ResponseFor<"PUT", Path>>(
+        "PUT",
+        path,
+        body,
+        query,
+        options
+      );
+    }
+
+    async patch<Path extends PathsFor<"PATCH">>(
+      path: Path,
+      body: Body<"PATCH", Path>,
+      query?: Query<Path>,
+      options?: APIRequestOptions
+    ) {
+      return this.requester<ResponseFor<"PATCH", Path>>(
+        "PATCH",
+        path,
+        body,
+        query,
+        options
+      );
+    }
+    ```
+  </Tab>
+
+  <Tab title="DELETE Requests">
+    ```typescript packages/node/src/rest/client.ts
+    async delete<Path extends PathsFor<"DELETE">>(
+      path: Path,
+      body: Body<"DELETE", Path>,
+      query?: Query<Path>,
+      options?: APIRequestOptions
+    ) {
+      return this.requester<ResponseFor<"DELETE", Path>>(
+        "DELETE",
+        path,
+        body,
+        query,
+        options
+      );
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Error Handling
+
+### TonightPassAPIError
+
+The SDK provides a typed error class for API errors:
+
+```typescript packages/node/src/rest/client.ts
+export class TonightPassAPIError<T> extends Error {
+  public readonly status: number;
+
+  constructor(
+    public readonly response: RedaxiosResponse<APIResponse<T>>,
+    public readonly data: ErroredAPIResponse
+  ) {
+    super(data.message);
+    this.status = response.status;
+  }
+}
+```
+
+**Usage:**
+
+```typescript
+import { TonightPassAPIError } from "tonightpass";
+
+try {
+  const user = await tnp.users.get("invalid-username");
+} catch (error) {
+  if (error instanceof TonightPassAPIError) {
+    console.error(`API Error ${error.status}: ${error.message}`);
+    
+    // Access validation errors
+    if (error.data.errors) {
+      Object.entries(error.data.errors).forEach(([field, messages]) => {
+        console.error(`${field}: ${messages.join(", ")}`);
+      });
+    }
+  }
+}
+```
+
+## Client Configuration
+
+### ClientOptions Type
+
+```typescript packages/node/src/rest/client.ts
+export type ClientOptions = {
+  readonly baseURL: string;
+  readonly apiKey?: string;
+  readonly accessToken?: string;
+  readonly cache?: CacheOptions;
+};
+```
+
+<Accordion title="Cache Options">
+  ```typescript
+  export type CacheOptions = {
+    enabled: boolean;
+    ttl?: number; // Time to live in milliseconds
+    methods?: Array<"GET" | "POST" | "PUT" | "PATCH" | "DELETE">;
+  };
+  ```
+
+  **Example:**
+  ```typescript
+  const tnp = new TonightPass({
+    baseURL: "https://api.tonightpass.com",
+    apiKey: "your-api-key",
+    cache: {
+      enabled: true,
+      ttl: 60000, // 1 minute
+      methods: ["GET"] // Only cache GET requests
+    }
+  });
+  ```
+</Accordion>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Import Types" icon="file-import">
+    Always import types for better IDE support:
+    ```typescript
+    import type { User, Organization } from "tonightpass";
+    ```
+  </Card>
+
+  <Card title="Use Type Guards" icon="shield-check">
+    Check response success before accessing data:
+    ```typescript
+    const response = await tnp.users.get("username");
+    if (response.success) {
+      console.log(response.data);
+    }
+    ```
+  </Card>
+
+  <Card title="Leverage Inference" icon="wand-magic-sparkles">
+    Let TypeScript infer types when possible:
+    ```typescript
+    // No need to manually type
+    const user = await tnp.users.get("username");
+    ```
+  </Card>
+
+  <Card title="Handle Errors" icon="triangle-exclamation">
+    Always wrap API calls in try-catch:
+    ```typescript
+    try {
+      const user = await tnp.users.get("username");
+    } catch (error) {
+      // Handle error
+    }
+    ```
+  </Card>
+</CardGroup>
+
+<Warning>
+  The SDK requires TypeScript 5.0 or higher for optimal type inference and generic support.
+</Warning>

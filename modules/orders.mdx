@@ -1,0 +1,306 @@
+---
+title: 'Orders'
+description: 'Retrieve and manage ticket orders'
+icon: 'receipt'
+---
+
+The Orders module provides methods to retrieve and view ticket orders for events. Users can access their order history and view specific order details.
+
+## Available Methods
+
+### getAll
+
+Retrieve all orders for the authenticated user.
+
+```typescript
+const orders = await tonightpass.orders.getAll({
+  limit: 20,
+  offset: 0,
+  orderBy: 'createdAt',
+  orderDirection: 'desc',
+});
+
+console.log(`Found ${orders.length} orders`);
+```
+
+<ParamField path="options" type="ArrayOptions<Order>">
+  <Expandable title="ArrayOptions properties">
+    <ParamField path="limit" type="number">
+      Maximum number of orders to return (default: 20)
+    </ParamField>
+    <ParamField path="offset" type="number">
+      Number of orders to skip for pagination (default: 0)
+    </ParamField>
+    <ParamField path="orderBy" type="string">
+      Field to order results by (e.g., 'createdAt', 'total')
+    </ParamField>
+    <ParamField path="orderDirection" type="'asc' | 'desc'">
+      Sort direction
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+**Returns:** `Promise<Order[]>` - Array of order objects
+
+---
+
+### get
+
+Retrieve a specific order by its ID.
+
+```typescript
+const order = await tonightpass.orders.get(orderId);
+
+console.log('Order details:', order);
+console.log('Total:', order.total);
+console.log('Status:', order.status);
+```
+
+<ParamField path="orderId" type="string" required>
+  The unique identifier of the order
+</ParamField>
+
+**Returns:** `Promise<Order>` - The order object with full details
+
+## Order Object
+
+The `Order` type includes:
+
+```typescript
+interface Order {
+  id: string;
+  status: OrderStatus;
+  total: number;
+  currency: string;
+  items: OrderItem[];
+  user: UserIdentity;
+  event: EventIdentity;
+  createdAt: string;
+  updatedAt: string;
+  payment?: PaymentDetails;
+  tickets?: Ticket[];
+  // ... additional fields
+}
+
+type OrderStatus = 
+  | 'pending'
+  | 'confirmed'
+  | 'cancelled'
+  | 'refunded'
+  | 'expired';
+```
+
+## Usage Examples
+
+<CodeGroup>
+```typescript Get All Orders
+import { TonightPass } from '@tonightpass/sdk';
+
+const tonightpass = new TonightPass({
+  apiKey: process.env.TONIGHTPASS_API_KEY,
+});
+
+// Get recent orders
+const recentOrders = await tonightpass.orders.getAll({
+  limit: 10,
+  orderBy: 'createdAt',
+  orderDirection: 'desc',
+});
+
+console.log('Recent Orders:');
+recentOrders.forEach(order => {
+  console.log(`Order #${order.id}`);
+  console.log(`  Event: ${order.event.name}`);
+  console.log(`  Total: ${order.total} ${order.currency}`);
+  console.log(`  Status: ${order.status}`);
+  console.log(`  Date: ${new Date(order.createdAt).toLocaleDateString()}`);
+  console.log('---');
+});
+```
+
+```typescript Get Order Details
+import { TonightPass } from '@tonightpass/sdk';
+
+const tonightpass = new TonightPass({
+  apiKey: process.env.TONIGHTPASS_API_KEY,
+});
+
+const orderId = 'order_123abc';
+
+// Get detailed order information
+const order = await tonightpass.orders.get(orderId);
+
+console.log('Order Details:');
+console.log(`ID: ${order.id}`);
+console.log(`Status: ${order.status}`);
+console.log(`Total: ${order.total} ${order.currency}`);
+
+if (order.tickets) {
+  console.log(`\nTickets (${order.tickets.length}):`);
+  order.tickets.forEach((ticket, index) => {
+    console.log(`  ${index + 1}. ${ticket.type} - ${ticket.price} ${order.currency}`);
+  });
+}
+
+if (order.payment) {
+  console.log(`\nPayment Method: ${order.payment.method}`);
+  console.log(`Payment Status: ${order.payment.status}`);
+}
+```
+
+```typescript Order History Dashboard
+import { TonightPass } from '@tonightpass/sdk';
+
+const tonightpass = new TonightPass({
+  apiKey: process.env.TONIGHTPASS_API_KEY,
+});
+
+interface OrderSummary {
+  totalOrders: number;
+  totalSpent: number;
+  currency: string;
+  ordersByStatus: Record<string, number>;
+}
+
+async function getOrderSummary(): Promise<OrderSummary> {
+  // Get all orders (in production, you might want to paginate)
+  const orders = await tonightpass.orders.getAll({ limit: 1000 });
+  
+  const summary: OrderSummary = {
+    totalOrders: orders.length,
+    totalSpent: 0,
+    currency: orders[0]?.currency || 'USD',
+    ordersByStatus: {},
+  };
+  
+  orders.forEach(order => {
+    // Sum total spent
+    if (order.status === 'confirmed') {
+      summary.totalSpent += order.total;
+    }
+    
+    // Count by status
+    summary.ordersByStatus[order.status] = 
+      (summary.ordersByStatus[order.status] || 0) + 1;
+  });
+  
+  return summary;
+}
+
+const summary = await getOrderSummary();
+console.log('Order Summary:');
+console.log(`Total Orders: ${summary.totalOrders}`);
+console.log(`Total Spent: ${summary.totalSpent} ${summary.currency}`);
+console.log('Orders by Status:', summary.ordersByStatus);
+```
+
+```typescript Paginated Order List
+import { TonightPass } from '@tonightpass/sdk';
+
+const tonightpass = new TonightPass({
+  apiKey: process.env.TONIGHTPASS_API_KEY,
+});
+
+class OrderManager {
+  private pageSize = 20;
+  private currentPage = 0;
+  
+  async getPage(page: number = this.currentPage) {
+    this.currentPage = page;
+    const offset = page * this.pageSize;
+    
+    const orders = await tonightpass.orders.getAll({
+      limit: this.pageSize,
+      offset,
+      orderBy: 'createdAt',
+      orderDirection: 'desc',
+    });
+    
+    return orders;
+  }
+  
+  async nextPage() {
+    return this.getPage(this.currentPage + 1);
+  }
+  
+  async previousPage() {
+    if (this.currentPage > 0) {
+      return this.getPage(this.currentPage - 1);
+    }
+    return this.getPage(0);
+  }
+}
+
+// Usage
+const orderManager = new OrderManager();
+
+// Get first page
+const firstPage = await orderManager.getPage(0);
+console.log('Page 1:', firstPage.length, 'orders');
+
+// Get next page
+const secondPage = await orderManager.nextPage();
+console.log('Page 2:', secondPage.length, 'orders');
+```
+</CodeGroup>
+
+## Order Status Types
+
+<ResponseField name="pending" type="string">
+  Order has been created but payment is not yet confirmed
+</ResponseField>
+
+<ResponseField name="confirmed" type="string">
+  Order is confirmed and payment has been received
+</ResponseField>
+
+<ResponseField name="cancelled" type="string">
+  Order has been cancelled by the user or system
+</ResponseField>
+
+<ResponseField name="refunded" type="string">
+  Order payment has been refunded
+</ResponseField>
+
+<ResponseField name="expired" type="string">
+  Order has expired without payment completion
+</ResponseField>
+
+## Organization Orders
+
+For organization-specific order management (viewing orders for your events), use the Organizations module:
+
+```typescript
+// Get all orders for an organization
+const orgOrders = await tonightpass.organizations.orders.getAll(
+  'my-organization'
+);
+
+// Get orders for a specific event
+const eventOrders = await tonightpass.organizations.events.orders.getAll(
+  'my-organization',
+  'event-slug'
+);
+```
+
+See the [Organizations module documentation](/modules/organizations) for more details.
+
+## Best Practices
+
+<Tip>
+  - Implement pagination for better performance when displaying order history
+  - Cache order data locally to reduce API calls
+  - Show loading states while fetching order information
+  - Display clear status indicators for each order
+  - Provide filters for order status, date range, etc.
+</Tip>
+
+<Note>
+  Order details include sensitive information. Ensure proper authentication and authorization before displaying order data.
+</Note>
+
+## Related Modules
+
+- [Organizations](/modules/organizations) - Manage organization orders and event orders
+- [Users](/modules/users) - Access user bookings and tickets
+- [Currencies](/modules/currencies) - Convert order totals between currencies

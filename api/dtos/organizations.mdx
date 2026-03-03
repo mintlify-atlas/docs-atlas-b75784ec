@@ -1,0 +1,384 @@
+---
+title: 'Organizations DTOs'
+description: 'Data Transfer Objects for organization and member management'
+---
+
+## Overview
+
+Organizations DTOs handle the creation and management of organizations, their identities, and members in the Tonight Pass SDK. These include comprehensive validation for organization profiles and member roles.
+
+---
+
+## CreateOrganizationDto
+
+Used to create a new organization.
+
+### Class Definition
+
+```typescript
+export class CreateOrganizationDto {
+  organizationSlug?: string;
+  identity: CreateOrganizationIdentityDto;
+  members: CreateOrganizationMemberDto[];
+  location?: Location;
+}
+```
+
+### Properties
+
+<ParamField path="organizationSlug" type="string">
+  The unique URL slug for the organization.
+  
+  **Validation:**
+  - Must be lowercase
+  - Length: 1-48 characters
+</ParamField>
+
+<ParamField path="identity" type="CreateOrganizationIdentityDto" required>
+  The organization's identity information (display name, description, avatar, etc.).
+</ParamField>
+
+<ParamField path="members" type="CreateOrganizationMemberDto[]" required>
+  Array of initial members to add to the organization.
+</ParamField>
+
+<ParamField path="location" type="Location">
+  The organization's physical location.
+</ParamField>
+
+### Example
+
+```typescript
+const createOrg: CreateOrganizationDto = {
+  organizationSlug: "my-organization",
+  identity: {
+    displayName: "My Organization",
+    description: "A great organization",
+    avatarUrl: "https://cdn.tonightpass.com/organizations/avatar.jpg"
+  },
+  members: [
+    {
+      user: "alice",
+      role: OrganizationMemberRole.Owner
+    }
+  ],
+  location: {
+    address: "123 Main St",
+    zipCode: "75001",
+    city: "Paris",
+    country: "France",
+    geometry: {
+      type: "Point",
+      coordinates: [2.3522, 48.8566]
+    }
+  }
+};
+```
+
+---
+
+## CreateOrganizationIdentityDto
+
+Used to define an organization's identity during creation.
+
+### Class Definition
+
+```typescript
+export class CreateOrganizationIdentityDto {
+  displayName: string;
+  description?: string;
+  avatarUrl?: string;
+  bannerUrl?: string;
+  links?: string[];
+}
+```
+
+### Properties
+
+<ParamField path="displayName" type="string" required>
+  The display name of the organization.
+  
+  **Validation:**
+  - Length: 1-32 characters
+  - Must not be empty
+</ParamField>
+
+<ParamField path="description" type="string">
+  A description of the organization.
+  
+  **Validation:**
+  - Length: 16-1024 characters
+</ParamField>
+
+<ParamField path="avatarUrl" type="string">
+  URL to the organization's avatar image.
+  
+  **Validation:**
+  - Must match the organization avatar URL regex pattern
+</ParamField>
+
+<ParamField path="bannerUrl" type="string">
+  URL to the organization's banner image.
+  
+  **Validation:**
+  - Must match the organization banner URL regex pattern
+</ParamField>
+
+<ParamField path="links" type="string[]">
+  Array of links to the organization's social media or website.
+  
+  **Validation:**
+  - Maximum 5 links
+  - Each must be a valid URL
+</ParamField>
+
+---
+
+## UpdateOrganizationDto
+
+Used to update an existing organization.
+
+### Class Definition
+
+```typescript
+export class UpdateOrganizationDto {
+  slug?: string;
+  identity?: UpdateOrganizationIdentityDto;
+  members?: UpdateOrganizationMemberDto[];
+  location?: Location;
+}
+```
+
+### Properties
+
+<ParamField path="slug" type="string">
+  The new URL slug for the organization.
+  
+  **Validation:**
+  - Must be lowercase
+  - Length: 3-48 characters
+  - Must match the username format regex
+</ParamField>
+
+<ParamField path="identity" type="UpdateOrganizationIdentityDto">
+  Updated identity information for the organization.
+</ParamField>
+
+<ParamField path="members" type="UpdateOrganizationMemberDto[]">
+  Array of member updates.
+</ParamField>
+
+<ParamField path="location" type="Location">
+  Updated location information.
+</ParamField>
+
+### Example
+
+```typescript
+const updateOrg: UpdateOrganizationDto = {
+  slug: "new-organization-slug",
+  identity: {
+    displayName: "Updated Organization Name",
+    description: "Updated description"
+  }
+};
+```
+
+---
+
+## UpdateOrganizationIdentityDto
+
+Used to update an organization's identity.
+
+### Class Definition
+
+```typescript
+export class UpdateOrganizationIdentityDto {
+  displayName?: string;
+  description?: string;
+  avatarUrl?: string;
+  bannerUrl?: string;
+  links?: string[];
+}
+```
+
+### Properties
+
+<ParamField path="displayName" type="string">
+  The updated display name.
+  
+  **Validation:**
+  - Length: 1-32 characters
+  - Must not be empty
+</ParamField>
+
+<ParamField path="description" type="string">
+  The updated description.
+  
+  **Validation:**
+  - Length: 16-1024 characters
+</ParamField>
+
+<ParamField path="avatarUrl" type="string">
+  Updated avatar URL.
+  
+  **Validation:**
+  - Must match the organization avatar URL regex pattern
+</ParamField>
+
+<ParamField path="bannerUrl" type="string">
+  Updated banner URL.
+  
+  **Validation:**
+  - Must match the organization banner URL regex pattern
+</ParamField>
+
+<ParamField path="links" type="string[]">
+  Updated array of links.
+  
+  **Validation:**
+  - Maximum 5 links
+  - Each must be a valid URL
+</ParamField>
+
+---
+
+## CreateOrganizationMemberDto
+
+Used to add a new member to an organization.
+
+### Class Definition
+
+```typescript
+export class CreateOrganizationMemberDto {
+  user: string;
+  role: OrganizationMemberRole;
+}
+```
+
+### Properties
+
+<ParamField path="user" type="string" required>
+  The username or user ID of the member to add.
+  
+  **Validation:**
+  - Must not be empty
+</ParamField>
+
+<ParamField path="role" type="OrganizationMemberRole" required>
+  The role to assign to the member.
+  
+  **Valid values:**
+  - `OrganizationMemberRole.Owner` - Full control
+  - `OrganizationMemberRole.Admin` - Administrative access
+  - `OrganizationMemberRole.Manager` - Management access
+  - `OrganizationMemberRole.Member` - Basic member access
+</ParamField>
+
+### Example
+
+```typescript
+const addMember: CreateOrganizationMemberDto = {
+  user: "bob",
+  role: OrganizationMemberRole.Admin
+};
+```
+
+---
+
+## UpdateOrganizationMemberDto
+
+Used to update an existing organization member's role.
+
+### Class Definition
+
+```typescript
+export class UpdateOrganizationMemberDto {
+  role: OrganizationMemberRole;
+}
+```
+
+### Properties
+
+<ParamField path="role" type="OrganizationMemberRole" required>
+  The new role to assign to the member.
+  
+  **Valid values:**
+  - `OrganizationMemberRole.Owner` - Full control
+  - `OrganizationMemberRole.Admin` - Administrative access
+  - `OrganizationMemberRole.Manager` - Management access
+  - `OrganizationMemberRole.Member` - Basic member access
+</ParamField>
+
+### Example
+
+```typescript
+const updateMember: UpdateOrganizationMemberDto = {
+  role: OrganizationMemberRole.Manager
+};
+```
+
+---
+
+## CreateOrganizationMemberInvitationLinkDto
+
+Used to create an invitation link for new members.
+
+### Class Definition
+
+```typescript
+export class CreateOrganizationMemberInvitationLinkDto {
+  role?: OrganizationMemberRole;
+}
+```
+
+### Properties
+
+<ParamField path="role" type="OrganizationMemberRole">
+  The role that will be assigned to members who accept the invitation.
+  
+  **Valid values:**
+  - `OrganizationMemberRole.Owner` - Full control
+  - `OrganizationMemberRole.Admin` - Administrative access
+  - `OrganizationMemberRole.Manager` - Management access
+  - `OrganizationMemberRole.Member` - Basic member access
+</ParamField>
+
+### Example
+
+```typescript
+const createInvite: CreateOrganizationMemberInvitationLinkDto = {
+  role: OrganizationMemberRole.Member
+};
+```
+
+---
+
+## AcceptOrganizationMemberInvitationDto
+
+Used to accept an organization member invitation.
+
+### Class Definition
+
+```typescript
+export class AcceptOrganizationMemberInvitationDto {
+  token: string;
+}
+```
+
+### Properties
+
+<ParamField path="token" type="string" required>
+  The invitation token from the invitation link.
+  
+  **Validation:**
+  - Must not be empty
+</ParamField>
+
+### Example
+
+```typescript
+const acceptInvite: AcceptOrganizationMemberInvitationDto = {
+  token: "inv_1234567890abcdef"
+};
+```

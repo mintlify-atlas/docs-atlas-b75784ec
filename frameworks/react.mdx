@@ -1,0 +1,318 @@
+---
+title: React
+description: Tonight Pass React SDK for data fetching and real-time updates
+---
+
+The `@tonightpass/react` package provides React hooks for seamless integration with the Tonight Pass API using SWR for data fetching and caching.
+
+## Installation
+
+Install the package along with its peer dependencies:
+
+<CodeGroup>
+```bash npm
+npm install @tonightpass/react react
+```
+
+```bash yarn
+yarn add @tonightpass/react react
+```
+
+```bash pnpm
+pnpm add @tonightpass/react react
+```
+</CodeGroup>
+
+<Note>
+This package requires `react` as a peer dependency and uses `swr` for data fetching.
+</Note>
+
+## Features
+
+- Type-safe API hooks with full TypeScript support
+- Built on SWR for automatic caching and revalidation
+- Real-time WebSocket connections
+- Infinite pagination support
+- Automatic error handling
+
+## Hooks
+
+### useAPI
+
+The `useAPI` hook fetches data from Tonight Pass API endpoints with automatic caching and revalidation.
+
+#### Type Signature
+
+```typescript
+function useAPI<Path extends PathsFor<"GET">>(
+  path: Path | null | undefined,
+  query?: Query<Path>,
+  config?: UseAPIConfig<Path>
+): SWRResponse<ResponseType<Path>, ErrorType<Path>>
+```
+
+#### Usage
+
+```typescript
+import { useAPI } from '@tonightpass/react';
+
+function UserProfile({ userId }: { userId: string }) {
+  const { data, error, isLoading } = useAPI(
+    '/users/:id',
+    { id: userId }
+  );
+
+  if (isLoading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+
+  return (
+    <div>
+      <h1>{data.name}</h1>
+      <p>{data.email}</p>
+    </div>
+  );
+}
+```
+
+#### Configuration Options
+
+The `config` parameter extends SWR's configuration with additional options:
+
+<ParamField path="requestOptions" type="APIRequestOptions">
+  Additional options to pass to the API client
+</ParamField>
+
+<ParamField path="refreshInterval" type="number">
+  Polling interval in milliseconds (inherited from SWR)
+</ParamField>
+
+<ParamField path="revalidateOnFocus" type="boolean" default="true">
+  Revalidate when window regains focus (inherited from SWR)
+</ParamField>
+
+<ParamField path="revalidateOnReconnect" type="boolean" default="true">
+  Revalidate when network reconnects (inherited from SWR)
+</ParamField>
+
+#### Conditional Fetching
+
+Pass `null` or `undefined` as the path to conditionally disable fetching:
+
+```typescript
+function ConditionalFetch({ shouldFetch, userId }: { shouldFetch: boolean; userId: string }) {
+  const { data } = useAPI(
+    shouldFetch ? '/users/:id' : null,
+    { id: userId }
+  );
+
+  return <div>{data?.name}</div>;
+}
+```
+
+### useAPIInfinite
+
+The `useAPIInfinite` hook handles pagination and infinite scrolling with automatic data fetching.
+
+#### Type Signature
+
+```typescript
+function useAPIInfinite<Path extends PathsFor<"GET">>(
+  getKey: (
+    pageIndex: number,
+    previousPageData: ResponseType<Path> | null
+  ) => [Path, Query<Path> | undefined] | null,
+  config?: UseAPIInfiniteConfig<Path>
+): SWRInfiniteResponse<ResponseType<Path>, ErrorType<Path>>
+```
+
+#### Usage
+
+```typescript
+import { useAPIInfinite } from '@tonightpass/react';
+
+function UserList() {
+  const { data, size, setSize, isLoading } = useAPIInfinite(
+    (pageIndex, previousPageData) => {
+      // Reached the end
+      if (previousPageData && !previousPageData.hasMore) return null;
+
+      // First page or subsequent pages
+      return ['/users', { page: pageIndex + 1, limit: 20 }];
+    }
+  );
+
+  const users = data ? data.flatMap(page => page.items) : [];
+
+  return (
+    <div>
+      {users.map(user => (
+        <div key={user.id}>{user.name}</div>
+      ))}
+      <button 
+        onClick={() => setSize(size + 1)}
+        disabled={isLoading}
+      >
+        Load More
+      </button>
+    </div>
+  );
+}
+```
+
+#### Pagination Pattern
+
+The `getKey` function determines which page to fetch:
+
+```typescript
+const getKey = (pageIndex: number, previousPageData: any) => {
+  // Stop if we've reached the end
+  if (previousPageData && !previousPageData.hasMore) return null;
+  
+  // Return the key for the next page
+  return ['/endpoint', { page: pageIndex, limit: 10 }];
+};
+```
+
+### useWebSocket
+
+The `useWebSocket` hook establishes real-time WebSocket connections with automatic reconnection.
+
+#### Type Signature
+
+```typescript
+function useWebSocket<Path extends WebSocketPaths>(
+  path: Path | null | undefined,
+  options?: WebSocketOptionsType<Path>,
+  config?: UseWebSocketOptions
+): {
+  data: any;
+  error: Error | undefined;
+  isConnected: boolean;
+  isDisconnected: boolean;
+  message: unknown | null;
+}
+```
+
+#### Usage
+
+```typescript
+import { useWebSocket } from '@tonightpass/react';
+
+function RealtimeUpdates() {
+  const { message, isConnected, error } = useWebSocket(
+    '/events',
+    { channel: 'updates' },
+    {
+      maxReconnectAttempts: 5,
+      reconnectInterval: 2000
+    }
+  );
+
+  return (
+    <div>
+      <div>Status: {isConnected ? 'Connected' : 'Disconnected'}</div>
+      {error && <div>Error: {error.message}</div>}
+      {message && <div>Received: {JSON.stringify(message)}</div>}
+    </div>
+  );
+}
+```
+
+#### Configuration Options
+
+<ParamField path="maxReconnectAttempts" type="number" default="3">
+  Maximum number of reconnection attempts before giving up
+</ParamField>
+
+<ParamField path="reconnectInterval" type="number" default="1000">
+  Time in milliseconds to wait between reconnection attempts
+</ParamField>
+
+#### Connection States
+
+The hook returns several connection state indicators:
+
+```typescript
+const {
+  isConnected,    // true when WebSocket is connected
+  isDisconnected, // true when WebSocket is disconnected
+  message,        // latest message received (null if none)
+  error          // connection or message error
+} = useWebSocket('/events');
+```
+
+## Custom Client Configuration
+
+The package uses a default client instance, but you can access it for custom configuration:
+
+```typescript
+import { client } from '@tonightpass/react';
+
+// The client is pre-configured with DEFAULT_API_URL
+// You can use it directly for custom requests
+const response = await client.get('/custom-endpoint', { id: '123' });
+```
+
+## SWR Integration
+
+All hooks are built on top of [SWR](https://swr.vercel.app/), which provides:
+
+- **Automatic Revalidation**: Data is revalidated on focus, reconnect, and interval
+- **Cache Management**: Smart caching with deduplication
+- **Optimistic Updates**: Update UI before server response
+- **Mutation Support**: Use SWR's mutation features with Tonight Pass hooks
+
+### Global SWR Configuration
+
+Wrap your app with SWR's global configuration:
+
+```typescript
+import { SWRConfig } from 'swr';
+
+function App() {
+  return (
+    <SWRConfig 
+      value={{
+        refreshInterval: 3000,
+        revalidateOnFocus: false,
+        dedupingInterval: 2000
+      }}
+    >
+      <YourApp />
+    </SWRConfig>
+  );
+}
+```
+
+## Error Handling
+
+All hooks return type-safe errors:
+
+```typescript
+const { data, error } = useAPI('/users/:id', { id: '123' });
+
+if (error) {
+  // error is typed as TonightPassAPIError
+  console.error(error.message);
+  console.error(error.status);
+  console.error(error.code);
+}
+```
+
+## TypeScript Support
+
+The package provides full TypeScript support with:
+
+- Automatic path inference
+- Query parameter type checking
+- Response type inference
+- Error type safety
+
+```typescript
+// Path and query params are type-checked
+const { data } = useAPI('/users/:id', { id: '123' });
+//                                     ^ Must match path parameters
+
+// Response type is automatically inferred
+data?.name; // TypeScript knows the shape of data
+```
