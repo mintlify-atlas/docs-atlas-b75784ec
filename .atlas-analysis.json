@@ -1,0 +1,119 @@
+{
+  "projectType": "sdk-library",
+  "projectName": "Tonight Pass SDK",
+  "projectDescription": "TypeScript SDK and tools for integrating with the Tonight Pass event platform API",
+  "theme": "mint",
+  "primaryColor": "#7C3AED",
+  "lightColor": "#A78BFA",
+  "darkColor": "#5B21B6",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Core SDK",
+            "pages": [
+              "core/client",
+              "core/authentication",
+              "core/error-handling",
+              "core/caching"
+            ]
+          },
+          {
+            "group": "SDK Modules",
+            "pages": [
+              "modules/api-keys",
+              "modules/auth",
+              "modules/channels",
+              "modules/currencies",
+              "modules/feed",
+              "modules/health",
+              "modules/notifications",
+              "modules/orders",
+              "modules/organizations",
+              "modules/profiles",
+              "modules/roadmap",
+              "modules/users"
+            ]
+          },
+          {
+            "group": "Framework Integration",
+            "pages": [
+              "frameworks/react",
+              "frameworks/nestjs",
+              "frameworks/mailjet"
+            ]
+          },
+          {
+            "group": "Advanced",
+            "pages": [
+              "advanced/typescript",
+              "advanced/websocket",
+              "advanced/migration"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "REST Client",
+            "pages": [
+              "api/client",
+              "api/endpoints",
+              "api/types"
+            ]
+          },
+          {
+            "group": "DTOs",
+            "pages": [
+              "api/dtos/api-keys",
+              "api/dtos/channels",
+              "api/dtos/organizations",
+              "api/dtos/users"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Type-safe REST client with comprehensive TypeScript support",
+    "Built-in caching with configurable strategies",
+    "Framework-specific adapters for React and NestJS",
+    "WebSocket support for real-time updates",
+    "Comprehensive API coverage for event management platform",
+    "Authentication with API keys and access tokens",
+    "Error handling with detailed error types"
+  ],
+  "publicApiSurface": [
+    "TonightPass",
+    "Client",
+    "apiKeys",
+    "auth",
+    "careers",
+    "channels",
+    "currencies",
+    "feed",
+    "health",
+    "notifications",
+    "orders",
+    "organizations",
+    "profiles",
+    "roadmap",
+    "users",
+    "useApi",
+    "useApiInfinite",
+    "useWebSocket"
+  ]
+}
